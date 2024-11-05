@@ -7,11 +7,12 @@ import { Spin } from 'antd';
 const DynamicPageContent = ({ params }: { params: { slug: string, subSlug: string } }) => {
   const { slug, subSlug } = params;
   const { menuData, getComponentForSlug } = useMenuData();
-  
+
   if (!menuData || menuData.length === 0) {
     return <div className="flex justify-center items-center mt-12"><Spin size="large" /></div>;
   }
 
+  // 根据是否有 subSlug 来决定如何获取组件
   const Component = getComponentForSlug(slug, subSlug);
 
   if (!Component) {

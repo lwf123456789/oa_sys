@@ -8,20 +8,30 @@ export const useMenuData = () => {
   const { menuData } = useMenuContext();
 
   const findMenuItem = (path: string): MenuItem | undefined => {
-    const findItem = (items: MenuItem[]): MenuItem | undefined => {
-      for (const item of items) {
-        if (item.path === path) return item;
-        if (item.children) {
-          const found = findItem(item.children);
-          if (found) return found;
+    // 先处理顶级菜单
+    const topLevelItem = menuData.find(item => item.path === path);
+    if (topLevelItem) {
+      return topLevelItem;
+    }
+
+    // 如果不是顶级菜单，则在所有子菜单中查找
+    for (const item of menuData) {
+      if (item.children?.length) {
+        const childItem = item.children.find(child => child.path === path);
+        if (childItem) {
+          return childItem;
+        }
+      } else {
+        // 没有children属性但路径匹配的情况（比如表单设计器）
+        if (item.path === path) {
+          return item;
         }
       }
-      return undefined;
-    };
+    }
 
-    return findItem(menuData);
+    return undefined;
   };
-
+  
   const getComponentForSlug = (slug: string, subSlug: string) => {
     const path = subSlug ? `/${slug}/${subSlug}` : `/${slug}`;
     const menuItem = findMenuItem(path);
