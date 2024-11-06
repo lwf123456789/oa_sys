@@ -35,6 +35,17 @@ const InputProperties: React.FC<InputPropertiesProps> = ({ component }) => {
             <BaseProperties component={component} />
             <Collapse defaultActiveKey={['basic', 'advanced']}>
                 <Panel header="基础配置" key="basic">
+                    <Form.Item
+                        label="字段标识"
+                        name="name"
+                        tooltip="流程引擎使用的唯一标识符，用于数据存储和流程条件判断"
+                        rules={[
+                            { required: true, message: '请输入字段标识' },
+                            { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '字段标识只能包含字母、数字和下划线，且必须以字母开头' }
+                        ]}
+                    >
+                        <Input placeholder="例如：leave_reason" />
+                    </Form.Item>
                     <Form.Item label="输入框类型" name="type">
                         <Select>
                             <Select.Option value="text">普通文本</Select.Option>
@@ -48,9 +59,6 @@ const InputProperties: React.FC<InputPropertiesProps> = ({ component }) => {
                             <Select.Option value="borderless">无边框</Select.Option>
                             <Select.Option value="filled">填充</Select.Option>
                         </Select>
-                    </Form.Item>
-                    <Form.Item label="字段名称" name="name" tooltip="表单提交时的字段名">
-                        <Input />
                     </Form.Item>
                     <Form.Item label="占位提示" name="placeholder">
                         <Input />

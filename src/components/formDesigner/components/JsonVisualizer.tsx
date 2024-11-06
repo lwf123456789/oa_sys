@@ -46,49 +46,75 @@ const JsonNode: React.FC<NodeProps> = ({ data }) => {
   );
 };
 
-const JsonVisualizer: React.FC<{ data: any }> = ({ data }) => {
+const JsonVisualizer: React.FC<{ data: any[] }> = ({ data }) => {
   const { nodes, edges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     let nodeId = 0;
 
-    const processObject = (obj: any, parentId?: string, key?: string, level = 0): string => {
-      const currentId = `node-${nodeId++}`;
-      const isArray = Array.isArray(obj);
-      const isObject = typeof obj === 'object' && obj !== null;
-      
+    // 添加根节点
+    const rootId = 'root';
+    nodes.push({
+      id: rootId,
+      type: 'jsonNode',
+      position: { x: 400, y: 0 },
+      data: {
+        label: 'Form Components',
+        type: 'root',
+        value: `${data.length} components`
+      },
+    });
+
+    // 处理每个组件
+    data.forEach((component, index) => {
+      const componentId = `component-${nodeId++}`;
+      const xOffset = (index - (data.length - 1) / 2) * 300;
+
+      // 添加组件节点
       nodes.push({
-        id: currentId,
+        id: componentId,
         type: 'jsonNode',
-        position: { x: nodeId * 250, y: level * 150 },
+        position: { x: xOffset + 400, y: 150 },
         data: {
-          label: key || 'Root',
-          type: isArray ? 'array' : (isObject ? 'object' : 'value'),
-          value: isArray ? `${obj.length} items` : (!isObject ? String(obj) : undefined),
+          label: component.type,
+          type: 'component',
+          value: component.id
         },
       });
 
-      if (parentId) {
-        edges.push({
-          id: `edge-${parentId}-${currentId}`,
-          source: parentId,
-          target: currentId,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed },
-          style: { stroke: '#94a3b8' },
-        });
-      }
+      // 连接到根节点
+      edges.push({
+        id: `edge-${rootId}-${componentId}`,
+        source: rootId,
+        target: componentId,
+        type: 'smoothstep',
+        markerEnd: { type: MarkerType.ArrowClosed },
+        style: { stroke: '#94a3b8' },
+      });
 
-      if (isObject) {
-        Object.entries(obj).forEach(([k, v], index) => {
-          processObject(v, currentId, k, level + 1);
-        });
-      }
+      // 处理组件的属性
+      const propsId = `props-${nodeId++}`;
+      nodes.push({
+        id: propsId,
+        type: 'jsonNode',
+        position: { x: xOffset + 400, y: 300 },
+        data: {
+          label: 'props',
+          type: 'object',
+          value: Object.keys(component.props).length + ' properties'
+        },
+      });
 
-      return currentId;
-    };
+      edges.push({
+        id: `edge-${componentId}-${propsId}`,
+        source: componentId,
+        target: propsId,
+        type: 'smoothstep',
+        markerEnd: { type: MarkerType.ArrowClosed },
+        style: { stroke: '#94a3b8' },
+      });
+    });
 
-    processObject(data);
     return { nodes, edges };
   }, [data]);
 

@@ -41,7 +41,7 @@ const RoleManagement: React.FC = () => {
   const [searchName, setSearchName] = useState<string>('');
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [fetchAssignedMenusLoading, setFetchAssignedMenusLoading] = useState(false);
+  const [fetchAssignedMenusLoading, setFetchAssignedMenusLoading] = useState<boolean>(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [form] = Form.useForm();

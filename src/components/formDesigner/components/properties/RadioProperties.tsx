@@ -14,16 +14,27 @@ const RadioProperties: React.FC<{ component: FormComponent }> = ({ component }) 
   });
 
   return (
-    <Form 
+    <Form
       form={form}
-      layout="vertical" 
+      layout="vertical"
       initialValues={component.props}
       onValuesChange={handleValuesChange}
     >
       <BaseProperties component={component} />
-      
+
       <Collapse defaultActiveKey={['basic', 'options', 'advanced']}>
         <Panel header="基础配置" key="basic">
+          <Form.Item
+            label="字段标识"
+            name="name"
+            tooltip="流程引擎使用的唯一标识符，用于数据存储和流程条件判断"
+            rules={[
+              { required: true, message: '请输入字段标识' },
+              { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '字段标识只能包含字母、数字和下划线，且必须以字母开头' }
+            ]}
+          >
+            <Input placeholder="例如：leave_reason" />
+          </Form.Item>
           <Form.Item label="展示类型" name="optionType">
             <Select>
               <Select.Option value="default">默认</Select.Option>
@@ -31,8 +42,8 @@ const RadioProperties: React.FC<{ component: FormComponent }> = ({ component }) 
             </Select>
           </Form.Item>
 
-          <Form.Item 
-            noStyle 
+          <Form.Item
+            noStyle
             shouldUpdate={(prev, curr) => prev.optionType !== curr.optionType}
           >
             {({ getFieldValue }) => (
@@ -74,18 +85,18 @@ const RadioProperties: React.FC<{ component: FormComponent }> = ({ component }) 
                     >
                       <Input placeholder="选项值" className="mr-2" />
                     </Form.Item>
-                    <Button 
-                      type="link" 
-                      danger 
+                    <Button
+                      type="link"
+                      danger
                       onClick={() => remove(index)}
                     >
                       删除
                     </Button>
                   </div>
                 ))}
-                <Button 
-                  type="dashed" 
-                  onClick={() => add({ label: '', value: '' })} 
+                <Button
+                  type="dashed"
+                  onClick={() => add({ label: '', value: '' })}
                   block
                 >
                   添加选项
@@ -99,7 +110,7 @@ const RadioProperties: React.FC<{ component: FormComponent }> = ({ component }) 
           <Form.Item label="禁用" name="disabled" valuePropName="checked">
             <Switch />
           </Form.Item>
-          
+
           <Form.Item label="必填" name="required" valuePropName="checked">
             <Switch />
           </Form.Item>

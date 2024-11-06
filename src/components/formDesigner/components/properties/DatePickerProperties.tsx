@@ -1,28 +1,40 @@
 import React from 'react';
-import { Form, Switch, Select, Collapse } from 'antd';
+import { Form, Switch, Select, Collapse, Input } from 'antd';
 import { FormComponent } from '../../types';
 import { useDesignerStore } from '../../store/useDesignerStore';
 import BaseProperties from './BaseProperties';
+import { useDateTimeForm } from '../../hooks/useDateTimeForm';
 
 const { Panel } = Collapse;
 
 const DatePickerProperties: React.FC<{ component: FormComponent }> = ({ component }) => {
-  const updateComponentProps = useDesignerStore(state => state.updateComponentProps);
-  const [form] = Form.useForm();
+  const { form, handleValuesChange } = useDateTimeForm({
+    component,
+    type: 'date'
+  });
 
   return (
-    <Form 
+    <Form
       form={form}
-      layout="vertical" 
+      layout="vertical"
       initialValues={component.props}
-      onValuesChange={(_, allValues) => {
-        updateComponentProps(component.id, allValues);
-      }}
+      onValuesChange={handleValuesChange}
     >
       <BaseProperties component={component} />
-      
+
       <Collapse defaultActiveKey={['basic', 'advanced']}>
         <Panel header="基础配置" key="basic">
+          <Form.Item
+            label="字段标识"
+            name="name"
+            tooltip="流程引擎使用的唯一标识符，用于数据存储和流程条件判断"
+            rules={[
+              { required: true, message: '请输入字段标识' },
+              { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '字段标识只能包含字母、数字和下划线，且必须以字母开头' }
+            ]}
+          >
+            <Input placeholder="例如：leave_reason" />
+          </Form.Item>
           <Form.Item label="选择器类型" name="picker">
             <Select>
               <Select.Option value="date">日期</Select.Option>

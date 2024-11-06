@@ -1,4 +1,4 @@
-# 表单设计器组件说明文档
+# 表单设计器组件与工作流组件说明文档
 
 ## 依赖
     "@dnd-kit/core": "^6.1.0",// 核心库
@@ -8,6 +8,7 @@
     "zustand": "^4.5.2",// 轻量级状态管理,用于表单配置
     "immer": "^10.0.4",// 不可变数据处理
     "@monaco-editor/react": "^4.6.0",// 代码编辑器
+    "reactflow": "^11.11.4",// 工作流
 
 ## 目录结构
 src/
@@ -17,6 +18,10 @@ src/
         ComponentRenderer.tsx  # 组件渲染器，负责根据类型渲染对应的表单组件
         FormGrid.tsx          # 栅格布局组件，支持多列布局和嵌套
         Toolbar.tsx           # 顶部工具栏，包含预览、导出、清空等功能
+        FormPreview.tsx       # 表单预览组件
+        JsonVisualizer.tsx     # JSON可视化组件
+        PreviewModal.tsx       # 预览弹窗（放置JSON数据预览）
+        SaveTemplateModal.tsx # 保存模板弹窗
         properties/           # 各类组件的属性配置面板
           BaseProperties.tsx    # 基础属性配置（如标签、布局等）
           InputProperties.tsx   # 输入框属性配置
@@ -36,7 +41,17 @@ src/
       DesignCanvas.tsx # 中间画布，接收拖拽组件并展示
       PropertyPanel.tsx # 右侧属性面板，配置选中组件的属性
       FormDesigner.tsx # 入口主组件，整合所有功能
+      FormManageMent.tsx # 表单数据管理
       types.ts         # 类型定义文件
+    
+    workflow/
+      designer/         # 流程设计器
+        nodes/         # 节点组件
+        edges/         # 连线组件  
+        panels/        # 配置面板
+      runtime/         # 运行时组件
+      store/          # 状态管理
+      types/          # 类型定义
 
 ## 核心组件说明
 

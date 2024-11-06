@@ -1,21 +1,17 @@
 import React from 'react';
 import { Form, InputNumber, Slider } from 'antd';
-import { useDesignerStore } from '../../store/useDesignerStore';
 import { FormComponent } from '../../types';
+import { useGridForm } from '../../hooks/useGridForm';
 
 interface GridPropertiesProps {
   component: FormComponent;
 }
 
 const GridProperties: React.FC<GridPropertiesProps> = ({ component }) => {
-  const updateComponentProps = useDesignerStore(state => state.updateComponentProps);
-
-  const handleValuesChange = (changedValues: any) => {
-    updateComponentProps(component.id, changedValues);
-  };
-
+  const { form, handleValuesChange } = useGridForm({ component });
   return (
     <Form
+      form={form}
       layout="vertical"
       initialValues={component.props}
       onValuesChange={handleValuesChange}

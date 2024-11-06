@@ -121,26 +121,44 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
   clearCanvas: () => set({ components: [], selectedId: null }),
   importConfig: (config) => {
     if (config.components) {
+      const processImportedComponent = (comp: any) => ({
+        id: comp.id || `${comp.type}-${Date.now()}`,
+        type: comp.type,
+        label: comp.label || comp.type,
+        props: comp.props || {},
+        children: comp.children?.map((child: any) =>
+          child ? processImportedComponent(child) : null
+        )
+      });
+
       set({
-        components: config.components.map((comp: any) => ({
-          id: comp.id || `${comp.type}-${Date.now()}`,
-          type: comp.type,
-          label: comp.label || comp.type,
-          props: comp.props || {}
-        })),
+        components: config.components.map(processImportedComponent),
         selectedId: null
       });
     }
   },
   exportConfig: () => {
     const { components } = get();
+
+    const processComponent = (component: FormComponent) => {
+      const result: any = {
+        id: component.id,
+        type: component.type,
+        props: component.props
+      };
+
+      // 如果组件有子组件，递归处理
+      if (component.children?.length) {
+        result.children = component.children.map(child =>
+          child ? processComponent(child) : null
+        );
+      }
+
+      return result;
+    };
+
     return {
-      // version: '1.0.0',
-      components: components.map(({ id, type, props }) => ({
-        id,
-        type,
-        props
-      }))
+      components: components.map(processComponent)
     };
   },
 }));

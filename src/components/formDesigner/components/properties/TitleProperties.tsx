@@ -1,15 +1,15 @@
 import React from 'react';
 import { Form, Input, Select, ColorPicker, Slider } from 'antd';
 import { FormComponent } from '../../types';
-import { useDesignerStore } from '../../store/useDesignerStore';
 import type { Color } from 'antd/es/color-picker';
+import { useTitleForm } from '../../hooks/useTitleForm';
 
 interface TitlePropertiesProps {
     component: FormComponent;
 }
 
 const TitleProperties: React.FC<TitlePropertiesProps> = ({ component }) => {
-    const updateComponentProps = useDesignerStore(state => state.updateComponentProps);
+    const { form, handleValuesChange } = useTitleForm({ component });
 
     const handleColorChange = (color: Color) => {
         const updatedProps = {
@@ -19,11 +19,12 @@ const TitleProperties: React.FC<TitlePropertiesProps> = ({ component }) => {
                 color: color.toHexString()
             }
         };
-        updateComponentProps(component.id, updatedProps);
+        handleValuesChange(component.id, updatedProps);
     };
 
     return (
         <Form
+            form={form}
             layout="vertical"
             initialValues={{
                 ...component.props,
@@ -32,19 +33,7 @@ const TitleProperties: React.FC<TitlePropertiesProps> = ({ component }) => {
                     color: component.props.style?.color || '#000000'
                 }
             }}
-            onValuesChange={(changedValues, allValues) => {
-                // 如果不是颜色变更，则使用默认的更新逻辑
-                if (!changedValues.style?.color) {
-                    const updatedProps = {
-                        ...allValues,
-                        style: {
-                            ...component.props.style,
-                            ...allValues.style
-                        }
-                    };
-                    updateComponentProps(component.id, updatedProps);
-                }
-            }}
+            onValuesChange={handleValuesChange}
         >
             <Form.Item label="标题内容" name="content">
                 <Input />
@@ -73,8 +62,8 @@ const TitleProperties: React.FC<TitlePropertiesProps> = ({ component }) => {
             </Form.Item>
 
             <Form.Item label="文字颜色">
-                <ColorPicker 
-                    value={component.props.style?.color} 
+                <ColorPicker
+                    value={component.props.style?.color}
                     onChange={handleColorChange}
                 />
             </Form.Item>

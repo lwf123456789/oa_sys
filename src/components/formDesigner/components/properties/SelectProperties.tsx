@@ -24,6 +24,17 @@ const SelectProperties: React.FC<{ component: FormComponent }> = ({ component })
 
       <Collapse defaultActiveKey={['basic', 'options', 'advanced']}>
         <Panel header="基础配置" key="basic">
+          <Form.Item
+            label="字段标识"
+            name="name"
+            tooltip="流程引擎使用的唯一标识符，用于数据存储和流程条件判断"
+            rules={[
+              { required: true, message: '请输入字段标识' },
+              { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '字段标识只能包含字母、数字和下划线，且必须以字母开头' }
+            ]}
+          >
+            <Input placeholder="例如：leave_reason" />
+          </Form.Item>
           <Form.Item label="选择模式" name="mode">
             <Select>
               <Select.Option value={undefined}>单选</Select.Option>

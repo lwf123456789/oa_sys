@@ -5,14 +5,18 @@ import {
     ClearOutlined,
     ExportOutlined,
     ImportOutlined,
+    SaveOutlined,
 } from '@ant-design/icons';
 import { useDesignerStore } from '../store/useDesignerStore';
 import PreviewModal from './PreviewModal';
+import SaveTemplateModal from './SaveTemplateModal';
 
 const Toolbar: React.FC = () => {
     const [previewOpen, setPreviewOpen] = useState(false);
     const { clearCanvas, exportConfig, importConfig } = useDesignerStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [saveModalOpen, setSaveModalOpen] = useState(false);
+
 
     const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -56,6 +60,7 @@ const Toolbar: React.FC = () => {
         });
     };
 
+
     return (
         <>
             <div className="h-12 px-4 border-b border-gray-200 bg-white flex items-center justify-end">
@@ -96,6 +101,13 @@ const Toolbar: React.FC = () => {
                             >
                             </Button>
                         </Tooltip>
+                        <Tooltip title="保存模板">
+                            <Button
+                                icon={<SaveOutlined />}
+                                type="primary"
+                                onClick={() => setSaveModalOpen(true)}
+                            />
+                        </Tooltip>
                     </Space>
                 </Space>
             </div>
@@ -103,6 +115,13 @@ const Toolbar: React.FC = () => {
             <PreviewModal
                 open={previewOpen}
                 onClose={() => setPreviewOpen(false)}
+                isDesign={true}
+            />
+
+
+            <SaveTemplateModal
+                open={saveModalOpen}
+                onClose={() => setSaveModalOpen(false)}
             />
         </>
     );

@@ -3,15 +3,25 @@ import { Modal, Tabs } from 'antd';
 import Editor from "@monaco-editor/react";
 import { useDesignerStore } from '../store/useDesignerStore';
 import JsonVisualizer from './JsonVisualizer';
+import FormPreview from './FormPreview';
 
 interface PreviewModalProps {
   open: boolean;
   onClose: () => void;
+  isDesign: boolean;
+  template?: any;
 }
 
-const PreviewModal: React.FC<PreviewModalProps> = ({ open, onClose }) => {
-  const exportConfig = useDesignerStore(state => state.exportConfig);
-  const config = exportConfig();
+const PreviewModal: React.FC<PreviewModalProps> = ({ open, onClose, isDesign = false, template }) => {
+
+  let config: any;
+  // 如果是表单设计器的预览，则需要从zustand中获取配置
+  if (isDesign) {
+    const exportConfig = useDesignerStore(state => state.exportConfig);
+    config = exportConfig();
+  } else {
+    config = template;
+  }
 
   return (
     <Modal
@@ -22,12 +32,17 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, onClose }) => {
       footer={null}
     >
       <Tabs
-        defaultActiveKey="visual"
+        defaultActiveKey="form"
         items={[
+          {
+            key: 'form',
+            label: '表单预览',
+            children: <FormPreview config={config?.components || config} />
+          },
           {
             key: 'visual',
             label: '可视化预览',
-            children: <JsonVisualizer data={config} />
+            children: <JsonVisualizer data={config?.components || config} />
           },
           {
             key: 'json',
