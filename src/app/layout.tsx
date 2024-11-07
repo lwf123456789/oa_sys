@@ -8,6 +8,7 @@ import { SessionProvider } from "next-auth/react"
 import { ConfigProvider } from 'antd';
 import 'dayjs/locale/zh-cn';
 import Metadata from "@/components/Metadata";
+import { ReactFlowProvider } from 'reactflow';
 
 export default function RootLayout({
   children,
@@ -22,15 +23,17 @@ export default function RootLayout({
       <body suppressHydrationWarning={true}>
         <ConfigProvider>
           <SessionProvider refetchInterval={10 * 60}>
-            <MenuProvider>
-              <BreadcrumbProvider>
-                <LayoutProvider>
+            <ReactFlowProvider>
+              <MenuProvider>
+                <BreadcrumbProvider>
+                  <LayoutProvider>
                   <div>
                     {children}
                   </div>
                 </LayoutProvider>
-              </BreadcrumbProvider>
-            </MenuProvider>
+                </BreadcrumbProvider>
+              </MenuProvider>
+            </ReactFlowProvider>
           </SessionProvider>
         </ConfigProvider>
       </body>

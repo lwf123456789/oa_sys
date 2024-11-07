@@ -44,14 +44,7 @@ src/
       FormManageMent.tsx # 表单数据管理
       types.ts         # 类型定义文件
     
-    workflow/
-      designer/         # 流程设计器
-        nodes/         # 节点组件
-        edges/         # 连线组件  
-        panels/        # 配置面板
-      runtime/         # 运行时组件
-      store/          # 状态管理
-      types/          # 类型定义
+    workFlow/
 
 ## 核心组件说明
 
