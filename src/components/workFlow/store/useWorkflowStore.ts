@@ -57,7 +57,6 @@ const getDefaultNodeLabel = (type: WorkflowNodeType): string => {
         approval: '审批节点',
         condition: '条件节点',
         parallel: '并行节点',
-        'parallel-branch': '并行分支',
         subprocess: '子流程',
         cc: '抄送节点',
         end: '结束'
@@ -74,14 +73,14 @@ const getDefaultNodeConfig = (type: WorkflowNodeType) => {
                 approvalMode: 'OR',
                 approverType: 'specific',
                 timeLimit: 24,
-                autoPass: false
+                autoPass: false,
+                isDefault: false
             };
         case 'parallel':
             return {
                 strategy: 'ALL',
                 branches: []
             };
-        // ... 其他节点类型的默认配置
         default:
             return {};
     }
@@ -154,24 +153,32 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             edges: state.edges.filter(edge => edge.id !== edgeId)
         }));
     },
-
+    
     validateConnection: (connection: Connection) => {
         const { source, target } = connection;
         const sourceNode = get().nodes.find(node => node.id === source);
         const targetNode = get().nodes.find(node => node.id === target);
-
+    
         if (!sourceNode || !targetNode) return false;
-
+    
         // 开始节点只能作为源节点
         if (targetNode.data.type === 'start') return false;
-
+    
         // 结束节点只能作为目标节点
         if (sourceNode.data.type === 'end') return false;
-
-        // 一个节点的入口连接数限制
+    
+        // 允许以下节点类型有多个入口连接：
+        // 1. parallel节点（并行节点）
+        // 2. end节点（结束节点）
+        // 3. approval节点（审批节点）且配置为默认审批节点
         const targetIncomingEdges = get().edges.filter(edge => edge.target === target);
-        if (targetNode.data.type !== 'parallel' && targetIncomingEdges.length >= 1) return false;
-
+        if (targetIncomingEdges.length >= 1 && 
+            targetNode.data.type !== 'parallel' &&
+            targetNode.data.type !== 'end' &&
+            !(targetNode.data.type === 'approval' && targetNode.data.config?.isDefault)) {
+            return false;
+        }
+    
         return true;
     },
 

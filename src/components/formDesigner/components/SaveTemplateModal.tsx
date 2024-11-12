@@ -1,45 +1,73 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Switch, message } from 'antd';
 import { useDesignerStore } from '../store/useDesignerStore';
-import { $clientReq } from '@/utils/clientRequest';
 
 interface SaveTemplateModalProps {
     open: boolean;
     onClose: () => void;
+    mode: 'create' | 'edit';
+    onSave: (data: any) => void;
+    initialData?: {
+        id?: number;
+        name?: string;
+        description?: string;
+        status?: number;
+    };
 }
 
-const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({ open, onClose }) => {
+const SaveTemplateModal: React.FC<SaveTemplateModalProps> = ({ 
+    open, 
+    onClose, 
+    mode, 
+    onSave,
+    initialData 
+}) => {
     const [form] = Form.useForm();
     const exportConfig = useDesignerStore(state => state.exportConfig);
+    const [loading, setLoading] = useState(false);
+    useEffect(() => {
+        if (mode === 'edit' && initialData) {
+            form.setFieldsValue({
+                name: initialData.name,
+                description: initialData.description,
+                status: initialData.status === 1
+            });
+        } else {
+            form.resetFields();
+        }
+    }, [mode, initialData, form]);
 
     const handleSubmit = async () => {
+        setLoading(true);
         try {
             const values = await form.validateFields();
             const config = exportConfig();
             const templateData = {
+                ...(initialData?.id ? { id: initialData.id } : {}),
                 name: values.name,
                 description: values.description,
                 config: config.components,
                 status: values.status ? 1 : 2
             };
 
-            console.log('保存模板数据:', templateData);
-
-            await $clientReq.post('/form-templates/create', templateData);
-            message.success('保存成功');
+            onSave(templateData);
             form.resetFields();
             onClose();
         } catch (error) {
-            console.error('表单验证失败:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <Modal
-            title="保存表单模板"
+            title={mode === 'create' ? '保存表单模板' : '编辑表单模板'}
             open={open}
             onCancel={onClose}
             onOk={handleSubmit}
+            okText="保存"
+            cancelText="取消"
+            confirmLoading={loading}
             destroyOnClose
         >
             <Form

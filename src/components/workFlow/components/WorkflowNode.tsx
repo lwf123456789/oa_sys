@@ -30,11 +30,6 @@ export const nodeConfigs: Record<WorkflowNodeType, NodeStyleConfig> = {
         style: 'bg-purple-50 border-purple-500 text-purple-600',
         iconColor: '#9333ea'
     },
-    'parallel-branch': {
-        icon: 'mdi:call-split',
-        style: 'bg-purple-50 border-purple-500 text-purple-600',
-        iconColor: '#9333ea'
-    },
     subprocess: {
         icon: 'mdi:sitemap',
         style: 'bg-indigo-50 border-indigo-500 text-indigo-600',

@@ -396,7 +396,7 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="py-4 px-2">
       <Row gutter={4}>
         {/* 左侧部门树 */}
         <Col span={4}>

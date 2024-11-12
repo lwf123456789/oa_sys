@@ -1,22 +1,35 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Form, Radio, InputNumber, Input } from 'antd';
 import { Node } from 'reactflow';
 import { WorkflowNodeData } from '../../types';
 import BaseNodeProperties from './BaseNodeProperties';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
+import { Edge } from 'reactflow';
+import { nanoid } from 'nanoid';
 
 interface ParallelNodePropertiesProps {
     node: Node<WorkflowNodeData>;
 }
 
 const ParallelNodeProperties: React.FC<ParallelNodePropertiesProps> = ({ node }) => {
-    const { updateNodeData } = useWorkflowStore();
+    const { updateNodeData, nodes, edges } = useWorkflowStore();
     const [form] = Form.useForm();
+
 
     const handleValuesChange = (changedValues: any) => {
         updateNodeData(node.id, changedValues);
     };
+
+    // useEffect(() => {
+    //     const branches = calculateBranches(node.id, nodes, edges);
+    //     updateNodeData(node.id, {
+    //         config: {
+    //             ...node.data.config,
+    //             branches
+    //         }
+    //     });
+    // }, [edges]);
 
     return (
         <div className="space-y-6">

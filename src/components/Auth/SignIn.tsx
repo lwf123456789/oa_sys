@@ -23,28 +23,32 @@ const SignIn: React.FC = () => {
 
     const onFinish = async (values: { email: string; password: string; }) => {
         setLoading(true)
-        const result = await signIn('credentials', {
-            redirect: false,
-            email: values.email,
-            password: values.password,
-        })
 
-        if (result?.error) {
-            console.log('result', result);
-            if (result.error === 'CredentialsSignin') {
-                message.error('邮箱或密码不正确')
-            } else {
-                message.error(result.error || '登录失败')
-            }
-        } else {
-            Notification({
-                type: 'success',
-                message: '登录成功!',
-                placement: 'top'
+        try {
+            const result = await signIn('credentials', {
+                redirect: false,
+                email: values.email,
+                password: values.password,
             })
-            router.push('/system/user')
+
+            if (result?.error) {
+                if (result.error === 'CredentialsSignin') {
+                    message.error('邮箱或密码不正确')
+                } else {
+                    message.error(result.error || '登录失败')
+                }
+            } else {
+                Notification({
+                    type: 'success',
+                    message: '登录成功!',
+                    placement: 'top'
+                })
+                router.replace('/system/user')
+            }
+        } catch (error) {
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
 
@@ -146,4 +150,4 @@ const SignIn: React.FC = () => {
     );
 };
 
-export default withoutAuth(SignIn)
+export default SignIn

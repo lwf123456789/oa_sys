@@ -2,14 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Space, Modal, message, Tag, Tooltip } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { $clientReq } from '@/utils/clientRequest';
-import PreviewModal from './components/PreviewModal';
 import dayjs from 'dayjs';
-import FormDesigner from './FormDesigner';
 
 interface FormTemplate {
     id: number;
     name: string;
     description: string;
+    formId: number;
+    version?: number;
+    creator?: object;
+    created_by: number;
+    category: string;
     status: number;
     created_at: string;
     updated_at: string;
@@ -19,54 +22,18 @@ interface FormTemplate {
 const FormManagement: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<FormTemplate[]>([]);
-    const [previewOpen, setPreviewOpen] = useState(false);
-    const [currentTemplate, setCurrentTemplate] = useState<FormTemplate | null>(null);
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
+    const [currentStatus, setCurrentStatus] = useState<number | undefined>(undefined);
+    const [currentCategory, setCurrentCategory] = useState<number | undefined>(undefined);
 
-    // 点击编辑弹出表单设计器
-    const [editOpen, setEditOpen] = useState(false)
-    const [designerMode, setDesignerMode] = useState<'create' | 'edit'>('create');
-    const [editingTemplate, setEditingTemplate] = useState<FormTemplate | null>(null);
 
-    // 处理保存逻辑
-    const handleSave = async (formData: any) => {
-        try {
-            if (designerMode === 'edit' && editingTemplate) {
-                const res = await $clientReq.put(`/form-templates/update?id=${editingTemplate.id}`, formData);
-                if (res.message) {
-                    message.success('更新成功');
-                }
-            } else {
-                await $clientReq.post('/form-templates/create', formData);
-                message.success('创建成功');
-            }
-            setEditOpen(false);
-            setEditingTemplate(null);
-            fetchData();
-        } catch (error) {
-        }
-    };
-
-    // 处理编辑按钮点击
-    const handleEdit = (record: FormTemplate) => {
-        setEditingTemplate(record);
-        setDesignerMode('edit');
-        setEditOpen(true);
-    };
-
-    // 处理新建按钮点击
-    const handleCreate = () => {
-        setDesignerMode('create');
-        setEditingTemplate(null);
-        setEditOpen(true);
-    };
-
-    const fetchData = useCallback(async (page = currentPage, size = pageSize) => {
+    const fetchData =  useCallback(async (page = currentPage, size = pageSize, status = currentStatus, category = currentCategory) => {
         try {
             setLoading(true);
-            const response = await $clientReq.get(`/form-templates/get?page=${page}&pageSize=${size}`);
+            const response = await $clientReq.get(`/workflows/get?page=${page}&pageSize=${size}&status=${status}&category=${category}`);
+
             setData(response.data.list);
         } catch (error) {
         } finally {
@@ -86,11 +53,9 @@ const FormManagement: React.FC = () => {
             okText: '确定',
             onOk: async () => {
                 try {
-                    const res = await $clientReq.delete(`/form-templates/del?id=${id}`);
-                    if (res.message) {
-                        message.success('删除成功');
-                        fetchData();
-                    }
+                    await $clientReq.delete(`/workflows/${id}`);
+                    message.success('删除成功');
+                    fetchData();
                 } catch (error) {
                     message.error('删除失败');
                 }
@@ -100,21 +65,18 @@ const FormManagement: React.FC = () => {
 
     const handlePreview = (record: FormTemplate) => {
         console.log('record:', record);
-
-        setCurrentTemplate(record.config);
-        setPreviewOpen(true);
     }
 
     const columns: any = [
         {
-            title: '表单名称',
+            title: '流程名称',
             dataIndex: 'name',
             key: 'name',
             width: 200,
             align: 'center',
         },
         {
-            title: '描述',
+            title: '流程描述',
             dataIndex: 'description',
             key: 'description',
             width: 250,
@@ -129,8 +91,8 @@ const FormManagement: React.FC = () => {
             width: 100,
             align: 'center',
             render: (status: number) => (
-                <Tag color={status === 1 ? 'success' : 'default'}>
-                    {status === 1 ? '启用' : '禁用'}
+                <Tag color={status === 1 ? 'warning' : status === 2 ? 'success' : 'danger'}>
+                    {status === 1 ? '草稿' : status === 2 ? '已发布' : '已禁用'}
                 </Tag>
             ),
         },
@@ -167,7 +129,7 @@ const FormManagement: React.FC = () => {
                         <Button
                             type="text"
                             icon={<EditOutlined />}
-                            onClick={() => handleEdit(record)}
+                            onClick={() => {/* TODO: 实现编辑功能 */ }}
                         />
                     </Tooltip>
                     <Tooltip title="删除">
@@ -188,9 +150,9 @@ const FormManagement: React.FC = () => {
             <div className="bg-white rounded-lg shadow">
                 <div className="p-4 border-b border-gray-200">
                     <Space className="flex justify-between">
-                        <span className="text-lg font-medium">表单模板管理</span>
-                        <Button type="primary" onClick={handleCreate}>
-                            新建表单
+                        <span className="text-lg font-medium">流程管理</span>
+                        <Button type="primary" onClick={() => {/* TODO: 跳转到流程设计器 */ }}>
+                            新建流程
                         </Button>
                     </Space>
                 </div>
@@ -208,51 +170,6 @@ const FormManagement: React.FC = () => {
                     />
                 </div>
             </div>
-
-            {currentTemplate && (
-                <PreviewModal
-                    isDesign={false}
-                    template={currentTemplate}
-                    open={previewOpen}
-                    onClose={() => {
-                        setPreviewOpen(false);
-                        setCurrentTemplate(null);
-                    }}
-                />
-            )}
-
-
-            {/* 表单设计器模态框 */}
-            <Modal
-                title={designerMode === 'create' ? '新建表单' : '编辑表单'}
-                open={editOpen}
-                onCancel={() => {
-                    setEditOpen(false);
-                    setEditingTemplate(null);
-                }}
-                width="100vw"
-                style={{
-                    top: 0,
-                    maxHeight: '100vh',
-                    overflow: 'auto'
-                }}
-                bodyStyle={{
-                    minHeight: '50vh',
-                    maxHeight: 'calc(100vh - 110px)', // 减去头部和底部的高度
-                    overflow: 'auto'
-                }}
-                footer={null}
-            >
-                <FormDesigner
-                    mode={designerMode}
-                    initialData={editingTemplate || undefined}
-                    onSave={handleSave}
-                    onCancel={() => {
-                        setEditOpen(false);
-                        setEditingTemplate(null);
-                    }}
-                />
-            </Modal>
         </div>
     );
 };

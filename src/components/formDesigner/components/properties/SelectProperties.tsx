@@ -96,6 +96,10 @@ const SelectProperties: React.FC<{ component: FormComponent }> = ({ component })
         </Panel>
 
         <Panel header="高级配置" key="advanced">
+          <Form.Item label="必填" name="required" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+
           <Form.Item label="允许清除" name="allowClear" valuePropName="checked">
             <Switch />
           </Form.Item>

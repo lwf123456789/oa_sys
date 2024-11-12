@@ -1,10 +1,13 @@
-'use client'
-import React, { useEffect } from 'react';
-import { Form, Input, Select, Radio, Switch } from 'antd';
-import { useWorkflowStore } from '../../store/useWorkflowStore'
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Form, Input, Select, Radio, Switch, Space, Tag, Button } from 'antd';
+import { useWorkflowStore } from '../../store/useWorkflowStore';
 import { Node } from 'reactflow';
 import { WorkflowNodeData } from '../../types';
 import BaseNodeProperties from './BaseNodeProperties';
+import { Icon } from '@iconify/react';
+import TableSelector from '../TableSelector';
+import { $clientReq } from '@/utils/clientRequest';
+import FormSelect from '../FormSelect';
 
 interface ApprovalNodePropertiesProps {
     node: Node<WorkflowNodeData>;
@@ -24,6 +27,156 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
         });
     }, [node.id]); // 只监听节点ID变化
 
+    const initialState = useMemo(() => ({
+        page: 1,
+        pageSize: 10,
+        keyword: ''
+    }), []);
+
+    const [lists, setLists] = useState({
+        departments: [] as Array<{ id: string; name: string }>,
+        roles: [] as Array<{ id: string; name: string }>,
+        users: [] as Array<{ id: string; name: string }>
+    });
+
+    const [searchParams, setSearchParams] = useState(initialState);
+    const [loading, setLoading] = useState(false);
+    const [total, setTotal] = useState(0);
+    const [selectorVisible, setSelectorVisible] = useState(false);
+    const [selectorType, setSelectorType] = useState<'department' | 'role' | 'user' | null>(null);
+    const [selectedItemsCache, setSelectedItemsCache] = useState<Record<string, any>>({});
+
+    // 监听审批人类型变化
+    const approverType = Form.useWatch(['config', 'approverType'], form);
+    useEffect(() => {
+        if (approverType) {
+            // 如果选择"所有人"，清空审批人列表
+            if (approverType === 'all') {
+                form.setFieldsValue({ 'config': { approvers: [] } });
+                setSelectedItemsCache({});
+            } else {
+                // 切换到其他类型时，也清空之前的选择
+                form.setFieldsValue({ 'config': { approvers: [] } });
+                setSelectedItemsCache({});
+                setSearchParams(initialState);
+                setLists(prev => ({
+                    ...prev,
+                    departments: [],
+                    roles: [],
+                    users: []
+                }));
+            }
+            // 关闭选择器（如果打开的话）
+            setSelectorVisible(false);
+            setSelectorType(null);
+            // 通知工作流数据更新
+            handleValuesChange({ 'config': { approvers: [] } });
+        }
+    }, [approverType]);
+
+    // 复用数据源选择逻辑
+    const dataSource = useMemo(() => {
+        switch (selectorType) {
+            case 'department':
+                return lists.departments;
+            case 'role':
+                return lists.roles;
+            case 'user':
+                return lists.users;
+            default:
+                return [];
+        }
+    }, [selectorType, lists]);
+
+    // 复用数据加载逻辑
+    const loadData = useCallback(async () => {
+        if (!selectorType || !selectorVisible) return;
+
+        setLoading(true);
+        try {
+            const endpoints = {
+                department: '/departments/get',
+                role: '/roles/get',
+                user: '/users/get'
+            };
+
+            const { data } = await $clientReq.get(
+                `${endpoints[selectorType]}?page=${searchParams.page}&pageSize=${searchParams.pageSize}&name=${searchParams.keyword}`
+            );
+
+            setLists(prev => ({
+                ...prev,
+                [selectorType + 's']: data.list
+            }));
+
+            const newCache = { ...selectedItemsCache };
+            data.list.forEach((item: any) => {
+                if (form.getFieldValue(['config', 'approvers'])?.includes(item.id)) {
+                    newCache[item.id] = item;
+                }
+            });
+            setSelectedItemsCache(newCache);
+
+            setTotal(data.total);
+        } catch (error) {
+        } finally {
+            setLoading(false);
+        }
+    }, [selectorType, selectorVisible, searchParams, selectedItemsCache, form]);
+
+    // 复用处理函数
+    const handleSelect = useCallback((type: 'department' | 'role' | 'user') => {
+        setSelectorType(type);
+        setSelectorVisible(true);
+    }, []);
+
+    const handleSearch = useCallback((value: string) => {
+        setSearchParams(prev => ({
+            ...prev,
+            page: 1,
+            keyword: value
+        }));
+    }, []);
+
+    const handleSelectorOk = (rows: any[]) => {
+        const newCache = { ...selectedItemsCache };
+        rows.forEach(row => {
+            newCache[row.id] = row;
+        });
+        setSelectedItemsCache(newCache);
+
+        const newValues = rows.map(row => row.id);
+        form.setFieldsValue({
+            config: {
+                ...node.data.config,
+                approvers: newValues
+            }
+        });
+        handleValuesChange({ config: { approvers: newValues } });
+        setSelectorVisible(false);
+    };
+
+    const handlePageChange = useCallback((page: number, pageSize: number) => {
+        setSearchParams(prev => ({
+            ...prev,
+            page,
+            pageSize
+        }));
+    }, []);
+
+    // 根据发起人类型加载对应数据
+    useEffect(() => {
+        if (selectorVisible) {
+            if (selectorType === 'department') {
+                loadData();
+            } else if (selectorType === 'role') {
+                loadData();
+            } else if (selectorType === 'user') {
+                loadData();
+            }
+        }
+    }, [selectorVisible, selectorType, searchParams]);
+
     const handleValuesChange = (changedValues: any) => {
         if (changedValues.config) {
             updateNodeData(node.id, {
@@ -37,6 +190,39 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
         }
     };
 
+    // 获取选中项
+    const getSelectedItems = () => {
+        const approvers = form.getFieldValue(['config', 'approvers']) || [];
+        return approvers.map((id: any) => selectedItemsCache[id]).filter(Boolean);
+    };
+
+    const handleRemoveTag = (id: string) => {
+        const approvers = form.getFieldValue(['config', 'approvers']) || [];
+        const newApprovers = approvers.filter((item: string) => item !== id);
+
+        const newCache = { ...selectedItemsCache };
+        delete newCache[id];
+        setSelectedItemsCache(newCache);
+
+        form.setFieldsValue({
+            config: {
+                ...node.data.config,
+                approvers: newApprovers
+            }
+        });
+        handleValuesChange({ config: { approvers: newApprovers } });
+    };
+
+    useEffect(() => {
+        if (selectorVisible && selectorType) {
+            const approvers = form.getFieldValue(['config', 'approvers']) || [];
+            // 如果有已选项但缓存为空，则需要加载数据
+            if (approvers.length > 0 && Object.keys(selectedItemsCache).length === 0) {
+                loadData();
+            }
+        }
+    }, [selectorVisible, selectorType]);
+
     return (
         <div className="space-y-6">
             <BaseNodeProperties node={node} />
@@ -45,10 +231,41 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
                 form={form}
                 layout="vertical"
                 initialValues={{
-                    config: node.data.config // 修改初始值结构
+                    config: node.data.config
                 }}
                 onValuesChange={handleValuesChange}
             >
+                <Form.Item
+                    label="是否为默认审批节点"
+                    name={['config', 'isDefault']}
+                    valuePropName="checked"
+                    initialValue={false}
+                >
+                    <Switch />
+                </Form.Item>
+
+                <Form.Item
+                    noStyle
+                    shouldUpdate={(prev, curr) =>
+                        prev.config?.isDefault !== curr.config?.isDefault
+                    }
+                >
+                    {({ getFieldValue }) => (
+                        getFieldValue(['config', 'isDefault']) && (
+                            <Form.Item
+                                label="汇聚规则"
+                                name={['config', 'mergeRule']}
+                                rules={[{ required: true, message: '请选择汇聚规则' }]}
+                            >
+                                <Radio.Group>
+                                    <Radio value="any">任一分支到达即可触发</Radio>
+                                    <Radio value="all">所有分支到达后触发</Radio>
+                                </Radio.Group>
+                            </Form.Item>
+                        )
+                    )}
+                </Form.Item>
+
                 <Form.Item
                     label="审批方式"
                     name={['config', 'approvalMode']}
@@ -65,49 +282,86 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
                     name={['config', 'approverType']}
                     rules={[{ required: true, message: '请选择审批人类型' }]}
                 >
-                    <Select>
-                        <Select.Option value="specific">指定成员</Select.Option>
-                        <Select.Option value="leader">上级领导</Select.Option>
-                        <Select.Option value="role">指定角色</Select.Option>
-                        <Select.Option value="department">指定部门</Select.Option>
-                    </Select>
+                    <Radio.Group>
+                        <Space direction="vertical">
+                            <Radio value="all">所有人</Radio>
+                            <Radio value="department">指定部门</Radio>
+                            <Radio value="role">指定角色</Radio>
+                            <Radio value="user">指定用户</Radio>
+                        </Space>
+                    </Radio.Group>
                 </Form.Item>
 
-                {/* 根据审批人类型显示不同的选择器 */}
-                <Form.Item
-                    noStyle
-                    shouldUpdate={(prev, curr) =>
-                        prev.config?.approverType !== curr.config?.approverType
-                    }
-                >
-                    {({ getFieldValue }) => {
-                        const approverType = getFieldValue(['config', 'approverType']);
-                        if (approverType === 'specific' || approverType === 'role' || approverType === 'department') {
-                            return (
-                                <Form.Item
-                                    label={`选择${approverType === 'specific' ? '成员' : approverType === 'role' ? '角色' : '部门'}`}
-                                    name={['config', 'approvers']}
-                                    rules={[{ required: true, message: '请选择审批人' }]}
-                                >
-                                    <Select mode="multiple">
-                                        {/* 这里可以根据类型加载不同的选项 */}
-                                    </Select>
-                                </Form.Item>
-                            );
-                        }
-                        return null;
+                {approverType && (
+                    <Form.Item
+                        label={`已选${approverType === 'department' ? '部门' : approverType === 'role' ? '角色' : '用户'}`}
+                        name={['config', 'approvers']}
+                        rules={[{ required: true, message: '请选择审批人' }]}
+                    >
+                        <div className="space-y-4">
+                            <div className="min-h-[32px] p-2 bg-gray-50 rounded-md border border-gray-200">
+                                {getSelectedItems().length > 0 ? (
+                                    <Space size={[0, 8]} wrap>
+                                        {getSelectedItems().map((item: any) => (
+                                            <Tag
+                                                key={item.id}
+                                                className="px-2 py-1 flex items-center gap-1"
+                                                color="blue"
+                                                closable
+                                                onClose={() => handleRemoveTag(item.id)}
+                                            >
+                                                {item.name}
+                                            </Tag>
+                                        ))}
+                                    </Space>
+                                ) : (
+                                    <div className="text-gray-400">未选择</div>
+                                )}
+                            </div>
+                            <Button
+                                type="primary"
+                                ghost
+                                className="w-full"
+                                icon={<Icon icon="mdi:plus" />}
+                                onClick={() => handleSelect(approverType)}
+                            >
+                                选择{approverType === 'department' ? '部门' : approverType === 'role' ? '角色' : '用户'}
+                            </Button>
+                        </div>
+                    </Form.Item>
+                )}
+
+                <TableSelector
+                    visible={selectorVisible}
+                    title={`选择${selectorType === 'department' ? '部门' : selectorType === 'role' ? '角色' : '用户'}`}
+                    onCancel={() => setSelectorVisible(false)}
+                    onOk={handleSelectorOk}
+                    onSearch={handleSearch}
+                    multiple
+                    loading={loading}
+                    defaultSelectedRows={getSelectedItems()}
+                    pagination={{
+                        current: searchParams.page,
+                        pageSize: searchParams.pageSize,
+                        total: total,
+                        onChange: handlePageChange
                     }}
-                </Form.Item>
+                    tableProps={{
+                        columns: [
+                            { title: 'ID', dataIndex: 'id' },
+                            { title: '名称', dataIndex: 'name' }
+                        ],
+                        dataSource: dataSource
+                    }}
+                />
 
+                {/* 保留原有的其他配置项 */}
                 <Form.Item
                     label="审批表单"
                     name={['config', 'formId']}
                     tooltip="审批时需要填写的表单"
                 >
-                    <Select
-                        placeholder="请选择审批表单"
-                        allowClear
-                    />
+                    <FormSelect showSearch allowClear placeholder="请选择表单" />
                 </Form.Item>
 
                 <Form.Item

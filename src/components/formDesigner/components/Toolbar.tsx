@@ -10,13 +10,33 @@ import {
 import { useDesignerStore } from '../store/useDesignerStore';
 import PreviewModal from './PreviewModal';
 import SaveTemplateModal from './SaveTemplateModal';
+import { $clientReq } from '@/utils/clientRequest';
 
-const Toolbar: React.FC = () => {
+interface ToolbarProps {
+    mode: 'create' | 'edit';
+    onSave?: (data: any) => void;
+    initialData?: {
+        id?: number;
+        name?: string;
+        description?: string;
+        status?: number;
+    };
+}
+
+const Toolbar: React.FC<ToolbarProps> = ({ mode = 'create', onSave, initialData }) => {
     const [previewOpen, setPreviewOpen] = useState(false);
     const { clearCanvas, exportConfig, importConfig } = useDesignerStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [saveModalOpen, setSaveModalOpen] = useState(false);
 
+    const handleSave = async (formData: any) => {
+        if(mode === 'create'){
+            const res = await $clientReq.post('/form-templates/create', formData);
+            if(res.message){
+                message.success('保存成功');
+            }
+        }
+    };
 
     const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -101,7 +121,7 @@ const Toolbar: React.FC = () => {
                             >
                             </Button>
                         </Tooltip>
-                        <Tooltip title="保存模板">
+                        <Tooltip title={mode === 'create' ? '保存模板' : '更新模板'}>
                             <Button
                                 icon={<SaveOutlined />}
                                 type="primary"
@@ -118,10 +138,12 @@ const Toolbar: React.FC = () => {
                 isDesign={true}
             />
 
-
             <SaveTemplateModal
                 open={saveModalOpen}
                 onClose={() => setSaveModalOpen(false)}
+                mode={mode}
+                onSave={handleSave}
+                initialData={initialData}
             />
         </>
     );

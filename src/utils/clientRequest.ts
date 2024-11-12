@@ -57,13 +57,11 @@ export const clientRequest = async (url: string, options: ExtendedRequestInit = 
         default:
           message.error(`请求失败: ${errorMessage}`);
       }
-      // throw new Error(errorMessage);
       return errorMessage;
     }
 
     return data;
   } catch (error) {
-    console.error('Request error:', error);
     // throw error;
     return error;
   }

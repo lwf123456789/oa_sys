@@ -5,7 +5,6 @@ export type WorkflowNodeType =
     | 'approval' //审批类型
     | 'condition' //条件类型
     | 'parallel' //并行类型
-    | 'parallel-branch' //并行分支类型
     | 'subprocess' //子流程类型
     | 'cc' //抄送类型
     | 'end'; //结束类型
@@ -20,6 +19,11 @@ export interface WorkflowNodeData {
     /** 节点配置信息 */
     config?: {
         // 审批节点配置
+        mergeRule?: 'any' | 'all'; // 添加汇聚规则
+        // any: 任一分支到达即可触发审批
+        // all: 所有分支到达才触发审批
+        /** 是否为默认审批节点 */
+        isDefault?: boolean;
         /** 审批方式：AND(会签)、OR(或签) */
         approvalMode?: 'AND' | 'OR';
         /** 审批人类型：specific(指定成员)、leader(上级领导)、role(指定角色)、department(指定部门) */
@@ -91,11 +95,14 @@ export interface ParallelNodeConfig {
     /** 投票通过数量（仅在VOTE策略时有效） */
     votePass?: number;
     /** 分支配置 */
-    branches: Array<{
+    branches: {
         id: string;
         label: string;
         description?: string;
-    }>;
+        nodeIds: string[]; // 记录该分支包含的节点ID
+        entryNodeId?: string; // 分支入口节点
+        exitNodeId?: string;  // 分支出口节点
+    }[];
 }
 
 // 条件节点配置

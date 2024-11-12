@@ -2,7 +2,6 @@
 import React, { useState, ReactNode } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-// import menuData from "@/data/menuData";
 import { useMenuContext } from "@/contexts/menuContext";
 import { Spin } from "antd";
 export default function DefaultLayout({

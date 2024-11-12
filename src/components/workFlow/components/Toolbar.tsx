@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Button, Divider, message, Space, Tooltip } from 'antd';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Button, Divider, Form, message, Modal, Space, Tooltip, Select, Input, Switch } from 'antd';
 import { WorkflowNodeType } from '../types';
 import {
     DeleteOutlined,
@@ -11,9 +11,14 @@ import {
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import { Icon } from '@iconify/react';
 import { nodeConfigs } from './WorkflowNode';
+import { $clientReq } from '@/utils/clientRequest';
 
 const Toolbar: React.FC = () => {
 
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [form] = Form.useForm();
+    const [addLoading, setAddLoading] = useState(false);
+    const [categoryOptions, setCategoryOptions] = useState<Array<{ label: string; value: string }>>([]);
     // 渲染节点按钮
     const renderNodeButton = (type: WorkflowNodeType, title: string) => {
         const config = nodeConfigs[type];
@@ -45,11 +50,11 @@ const Toolbar: React.FC = () => {
     const handleDragStart = useCallback((type: WorkflowNodeType) => (event: React.DragEvent) => {
         event.dataTransfer.setData('application/reactflow', type);
         event.dataTransfer.effectAllowed = 'move';
-    
+
         // 创建一个轻量级的预览元素
         const dragPreview = document.createElement('div');
         const config = nodeConfigs[type];
-        
+
         // 使用 CSS 类和内联样式优化性能
         dragPreview.className = `px-4 py-2 rounded-lg border-2 shadow-sm ${config.style}`;
         dragPreview.style.cssText = `
@@ -63,25 +68,25 @@ const Toolbar: React.FC = () => {
             align-items: center;
             gap: 8px;
         `;
-    
+
         // 优化 DOM 操作，减少重排
         dragPreview.innerHTML = `
             <i class="iconify" data-icon="${config.icon}" style="color: ${config.iconColor}; width: 16px; height: 16px;"></i>
             <span style="color: inherit;">${type}</span>
         `;
-    
+
         // 使用 Performance API 优化清理时机
         const cleanup = () => {
             if (document.body.contains(dragPreview)) {
                 dragPreview.remove();
             }
         };
-    
+
         // 使用 RAF 优化视觉效果
         requestAnimationFrame(() => {
             document.body.appendChild(dragPreview);
             event.dataTransfer.setDragImage(dragPreview, 0, 0);
-    
+
             // 使用 Performance API 优化清理时机
             if ('requestIdleCallback' in window) {
                 window.requestIdleCallback(cleanup, { timeout: 500 });
@@ -127,6 +132,37 @@ const Toolbar: React.FC = () => {
         };
         input.click();
     };
+
+    const handleOk = async () => {
+        setAddLoading(true);
+        form.validateFields().then(async values => {
+            const config = exportConfig();
+            const requestData = {
+                ...values,
+                config
+            };
+            await $clientReq.post('/workflows/create', requestData)
+            message.success('保存成功');
+            setIsModalVisible(false);
+        }).catch(info => {
+            console.log('Validate Failed:', info);
+        }).finally(() => {
+            setAddLoading(false);
+        });
+    };
+
+    const handleCancel = () => {
+        setIsModalVisible(false);
+    };
+
+    const fetchCategory = async () => {
+        const res = await $clientReq.get('/dicts?type=APPLY_CATEGORY')
+        setCategoryOptions(res.data.list)
+    }
+
+    useEffect(() => {
+        fetchCategory();
+    }, [])
 
     return (
         <div className="p-4 border-b flex justify-between bg-white">
@@ -177,9 +213,66 @@ const Toolbar: React.FC = () => {
                     <Button
                         type="primary"
                         icon={<SaveOutlined />}
+                        onClick={() => setIsModalVisible(true)}
                     />
                 </Tooltip>
             </Space>
+
+
+            <Modal
+                title="保存工作流"
+                open={isModalVisible}
+                onOk={handleOk}
+                onCancel={handleCancel}
+                cancelText="取消"
+                okText="保存"
+                confirmLoading={addLoading}
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    name="workflow_form"
+                >
+                    <Form.Item
+                        name="name"
+                        label="工作流名称"
+                        rules={[{ required: true, message: '请输入工作流名称' }]}
+                    >
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        name="category"
+                        label="分类"
+                        rules={[{ required: true, message: '请选择分类' }]}
+                    >
+                        <Select options={categoryOptions} showSearch allowClear>
+                        </Select>
+                    </Form.Item>
+                    <Form.Item
+                        name="description"
+                        label="描述"
+                    >
+                        <Input.TextArea />
+                    </Form.Item>
+                    <Form.Item
+                        name="formId"
+                        label="表单ID"
+                        rules={[{ required: true, message: '请输入表单ID' }]}
+                        initialValue={exportConfig().nodes.find(node => node.data.type === 'start')?.data.config?.formId}
+                    >
+                        <Input disabled />
+                    </Form.Item>
+                    <Form.Item
+                        name="status"
+                        label="状态"
+                        valuePropName="checked"
+                        getValueFromEvent={checked => checked ? 2 : 3}
+                    >
+                        <Switch />
+
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 };

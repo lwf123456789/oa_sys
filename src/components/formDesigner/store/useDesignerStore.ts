@@ -14,6 +14,13 @@ interface DesignerStore {
   clearCanvas: () => void;
   importConfig: (config: Record<string, any>) => void;
   exportConfig: () => Record<string, any>;
+  initializeWithData: (data: {
+    id?: number;
+    name?: string;
+    description?: string;
+    config?: any;
+    status?: number;
+  }) => void;
 }
 
 export const useDesignerStore = create<DesignerStore>((set, get) => ({
@@ -160,5 +167,30 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     return {
       components: components.map(processComponent)
     };
+  },
+  initializeWithData: (data) => {
+    if (data.config) {
+      const processComponent = (comp: any): FormComponent => ({
+        id: comp.id || `${comp.type}-${Date.now()}`,
+        type: comp.type,
+        label: comp.label || comp.type,
+        props: comp.props || {},
+        children: comp.children?.map((child: any) =>
+          child ? processComponent(child) : null
+        )
+      });
+
+      set({
+        components: Array.isArray(data.config) 
+          ? data.config.map(processComponent)
+          : [],
+        selectedId: null
+      });
+    } else {
+      set({
+        components: [],
+        selectedId: null
+      });
+    }
   },
 }));

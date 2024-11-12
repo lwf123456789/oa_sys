@@ -105,7 +105,9 @@ const WorkflowCanvas: React.FC = () => {
                     width={650}
                     onClose={() => setSelectedNodeId(null)}
                     open={!!selectedNodeId}
-                    maskStyle={{ background: 'transparent' }}
+                    mask={false}  // 移除蒙版
+                    maskClosable={false}  // 禁用蒙版点击关闭
+                    style={{ position: 'absolute' }}  // 确保抽屉不会影响其他元素
                 >
                     <PropertyPanel />
                 </Drawer>

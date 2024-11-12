@@ -50,6 +50,7 @@ const DatePickerProperties: React.FC<{ component: FormComponent }> = ({ componen
               <Select.Option value="YYYY-MM-DD">YYYY-MM-DD</Select.Option>
               <Select.Option value="YYYY/MM/DD">YYYY/MM/DD</Select.Option>
               <Select.Option value="YYYY年MM月DD日">YYYY年MM月DD日</Select.Option>
+              <Select.Option value="YYYY-MM-DD HH:mm:ss">YYYY-MM-DD HH:mm:ss</Select.Option>
             </Select>
           </Form.Item>
 
@@ -72,6 +73,10 @@ const DatePickerProperties: React.FC<{ component: FormComponent }> = ({ componen
         </Panel>
 
         <Panel header="高级配置" key="advanced">
+          <Form.Item label="必填" name="required" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+
           <Form.Item label="显示今天按钮" name="showToday" valuePropName="checked">
             <Switch />
           </Form.Item>

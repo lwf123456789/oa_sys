@@ -7,7 +7,7 @@ const FormSelect: React.FC<SelectProps> = (props) => {
     const [forms, setForms] = useState<Array<{ id: string; name: string }>>([]);
 
     const fetchForms = async () => {
-        const res = await $clientReq.get(`/form-templates/get?page=1&pageSize=10`);
+        const res = await $clientReq.get(`/form-templates/enabled?page=1&pageSize=10`);
         setForms(res.data.list);
     }
 

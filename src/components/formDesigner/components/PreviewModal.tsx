@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal, Tabs } from 'antd';
-import Editor from "@monaco-editor/react";
+import { Modal, Spin, Tabs } from 'antd';
+import Editor, { loader } from "@monaco-editor/react";
 import { useDesignerStore } from '../store/useDesignerStore';
 import JsonVisualizer from './JsonVisualizer';
 import FormPreview from './FormPreview';
@@ -11,6 +11,15 @@ interface PreviewModalProps {
   isDesign: boolean;
   template?: any;
 }
+
+// 配置 Monaco Editor 的 CDN
+loader.config({
+  paths: {
+    vs: 'https://cdn.bootcdn.net/ajax/libs/monaco-editor/0.34.0/min/vs'
+    // 或者使用 npmmirror 的镜像
+    // vs: 'https://registry.npmmirror.com/-/binary/monaco-editor/0.34.0/min/vs'
+  }
+});
 
 const PreviewModal: React.FC<PreviewModalProps> = ({ open, onClose, isDesign = false, template }) => {
 
@@ -23,6 +32,16 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, onClose, isDesign = f
     config = template;
   }
 
+  function handleEditorWillMount(monaco: any) {
+    // 可以在这里进行 Monaco 编辑器的预配置
+  }
+
+  function handleEditorDidMount(editor: any, monaco: any) {
+    // 编辑器加载完成后的回调
+    editor.layout(); // 强制重新布局
+  }
+
+
   return (
     <Modal
       title="表单配置预览"
@@ -30,6 +49,7 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, onClose, isDesign = f
       onCancel={onClose}
       width={1200}
       footer={null}
+      style={{ top: 20 }}
     >
       <Tabs
         defaultActiveKey="form"
@@ -62,6 +82,9 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ open, onClose, isDesign = f
                     automaticLayout: true,
                   }}
                   theme="vs-dark"
+                  loading={<Spin size="large" />}
+                  beforeMount={handleEditorWillMount}
+                  onMount={handleEditorDidMount}
                 />
               </div>
             )

@@ -219,7 +219,7 @@ const StartNodeProperties: React.FC<StartNodePropertiesProps> = ({ node }) => {
                 layout="vertical"
                 initialValues={node.data.config}
                 onValuesChange={handleValuesChange}
-            >
+            > 
                 <Form.Item
                     label="发起人类型"
                     name="initiatorType"
@@ -331,7 +331,7 @@ const StartNodeProperties: React.FC<StartNodePropertiesProps> = ({ node }) => {
                     </Input.Group>
                 </Form.Item>
 
-                <Form.Item
+                {/* <Form.Item
                     label="流程分类"
                     name="category"
                     rules={[{ required: true, message: '请选择流程分类' }]}
@@ -342,7 +342,7 @@ const StartNodeProperties: React.FC<StartNodePropertiesProps> = ({ node }) => {
                         <Select.Option value="purchase">采购流程</Select.Option>
                         <Select.Option value="business-trip">出差流程</Select.Option>
                     </Select>
-                </Form.Item>
+                </Form.Item> */}
 
                 <Form.Item
                     label="备注说明"
