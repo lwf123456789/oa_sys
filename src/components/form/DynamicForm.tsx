@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Input, Select, DatePicker, Typography } from 'antd';
 import type { FormInstance } from 'antd/es/form';
+import dayjs from 'dayjs'; // 确保导入 dayjs
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -8,9 +9,35 @@ const { TextArea } = Input;
 interface DynamicFormProps {
   config: any[];
   form?: FormInstance;
+  disabled?: boolean;
+  initialValues?: any;
 }
 
-const DynamicForm: React.FC<DynamicFormProps> = ({ config, form }) => {
+const DynamicForm: React.FC<DynamicFormProps> = ({
+  config,
+  form,
+  disabled = false,
+  initialValues
+}) => {
+  // 处理表单初始值
+  const processInitialValues = React.useMemo(() => {
+    if (!initialValues) return {};
+
+    const processed = { ...initialValues };
+    config.forEach(item => {
+      if (item.type === 'datePicker' && processed[item.props.name]) {
+        try {
+          const dateValue = processed[item.props.name];
+          processed[item.props.name] = dayjs(dateValue);
+        } catch (error) {
+          console.error('Date processing error:', error);
+          processed[item.props.name] = null;
+        }
+      }
+    });
+    return processed;
+  }, [initialValues, config]);
+
   const renderFormItem = (item: any) => {
     const { id, type, props } = item;
     const {
@@ -24,8 +51,10 @@ const DynamicForm: React.FC<DynamicFormProps> = ({ config, form }) => {
     } = props;
 
     const commonProps = {
-      style: { width: fieldWidth },
+      style: { width: fieldWidth || '100%' },
       placeholder,
+      disabled,
+      allowClear: !disabled, // 禁用状态下不允许清除
       ...restProps
     };
 
@@ -54,9 +83,17 @@ const DynamicForm: React.FC<DynamicFormProps> = ({ config, form }) => {
         return (
           <Form.Item key={id} {...formItemProps}>
             {props.type === 'textarea' ? (
-              <TextArea {...commonProps} />
+              <TextArea
+                {...commonProps}
+                readOnly={disabled}
+                allowClear={!disabled} // 禁用状态下不允许清除
+              />
             ) : (
-              <Input {...commonProps} />
+              <Input
+                {...commonProps}
+                readOnly={disabled}
+                allowClear={!disabled} // 禁用状态下不允许清除
+              />
             )}
           </Form.Item>
         );
@@ -64,14 +101,25 @@ const DynamicForm: React.FC<DynamicFormProps> = ({ config, form }) => {
       case 'select':
         return (
           <Form.Item key={id} {...formItemProps}>
-            <Select {...commonProps} />
+            <Select
+              {...commonProps}
+              open={disabled ? false : undefined}
+              allowClear={!disabled} // 禁用状态下不允许清除
+              showSearch={!disabled} // 禁用状态下不允许搜索
+            />
           </Form.Item>
         );
 
       case 'datePicker':
         return (
           <Form.Item key={id} {...formItemProps}>
-            <DatePicker {...commonProps} />
+            <DatePicker
+              {...commonProps}
+              inputReadOnly={true}
+              open={disabled ? false : undefined}
+              allowClear={!disabled} // 禁用状态下不允许清除
+              showToday={!disabled} // 禁用状态下不显示"今天"按钮
+            />
           </Form.Item>
         );
 
@@ -81,9 +129,16 @@ const DynamicForm: React.FC<DynamicFormProps> = ({ config, form }) => {
   };
 
   return (
-    <div className="dynamic-form">
-      {config.map(item => renderFormItem(item))}
-    </div>
+    <Form
+      form={form}
+      initialValues={processInitialValues}
+      disabled={disabled}
+      layout="vertical"
+    >
+      <div className="space-y-4">
+        {config.map(item => renderFormItem(item))}
+      </div>
+    </Form>
   );
 };
 

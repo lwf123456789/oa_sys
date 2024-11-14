@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { $serverReq } from '@/utils/serverRequest';
 
-export async function GET(request: any) {
+export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    if (!id) throw new Error('id 不能为空！');
-    const data = await $serverReq.get(`/workflows/tasks-records/${id}`);
+    if (!id) {
+      return NextResponse.json({ error: 'ID缺失' }, { status: 400 });
+    }
+
+    const data = await $serverReq.delete(`/workflows/${id}`);
+
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json(

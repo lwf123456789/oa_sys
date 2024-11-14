@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { Form, Input, Select, Radio, Switch, Space, Tag, Button } from 'antd';
 import { useWorkflowStore } from '../../store/useWorkflowStore';
 import { Node } from 'reactflow';
@@ -19,96 +19,51 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
 
     // 只在节点ID变化时重置表单
     useEffect(() => {
-        form.resetFields();
-        form.setFieldsValue({
-            label: node.data.label,
-            description: node.data.description,
-            config: node.data.config
-        });
-    }, [node.id]); // 只监听节点ID变化
+        const initializeApprovers = async () => {
+            const approvers = form.getFieldValue(['config', 'approvers']) || [];
+            if (approvers.length > 0) {
+                setLoading(true);
+                try {
+                    const { data } = await $clientReq.get(
+                        `/users/get?ids=${approvers.join(',')}`
+                    );
+                    const newCache = { ...selectedItemsCache };
+                    data.list.forEach((item: any) => {
+                        newCache[item.id] = item;
+                    });
+                    setSelectedItemsCache(newCache);
+                } catch (error) {
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
 
-    const initialState = useMemo(() => ({
-        page: 1,
-        pageSize: 10,
-        keyword: ''
-    }), []);
+        initializeApprovers();
+    }, [node.id]);
 
-    const [lists, setLists] = useState({
-        departments: [] as Array<{ id: string; name: string }>,
-        roles: [] as Array<{ id: string; name: string }>,
-        users: [] as Array<{ id: string; name: string }>
-    });
 
-    const [searchParams, setSearchParams] = useState(initialState);
+    const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState<number>(1)
+    const [pageSize, setPageSize] = useState<number>(10)
+    const [keyword, setKeyword] = useState<string | null>('')
     const [total, setTotal] = useState(0);
     const [selectorVisible, setSelectorVisible] = useState(false);
-    const [selectorType, setSelectorType] = useState<'department' | 'role' | 'user' | null>(null);
     const [selectedItemsCache, setSelectedItemsCache] = useState<Record<string, any>>({});
 
-    // 监听审批人类型变化
-    const approverType = Form.useWatch(['config', 'approverType'], form);
-    useEffect(() => {
-        if (approverType) {
-            // 如果选择"所有人"，清空审批人列表
-            if (approverType === 'all') {
-                form.setFieldsValue({ 'config': { approvers: [] } });
-                setSelectedItemsCache({});
-            } else {
-                // 切换到其他类型时，也清空之前的选择
-                form.setFieldsValue({ 'config': { approvers: [] } });
-                setSelectedItemsCache({});
-                setSearchParams(initialState);
-                setLists(prev => ({
-                    ...prev,
-                    departments: [],
-                    roles: [],
-                    users: []
-                }));
-            }
-            // 关闭选择器（如果打开的话）
-            setSelectorVisible(false);
-            setSelectorType(null);
-            // 通知工作流数据更新
-            handleValuesChange({ 'config': { approvers: [] } });
-        }
-    }, [approverType]);
-
-    // 复用数据源选择逻辑
-    const dataSource = useMemo(() => {
-        switch (selectorType) {
-            case 'department':
-                return lists.departments;
-            case 'role':
-                return lists.roles;
-            case 'user':
-                return lists.users;
-            default:
-                return [];
-        }
-    }, [selectorType, lists]);
-
-    // 复用数据加载逻辑
-    const loadData = useCallback(async () => {
-        if (!selectorType || !selectorVisible) return;
-
+    // 加载用户数据
+    const loadUsers = useCallback(async (page: number, pageSize: number, keyword: string | null) => {
         setLoading(true);
         try {
-            const endpoints = {
-                department: '/departments/get',
-                role: '/roles/get',
-                user: '/users/get'
-            };
-
             const { data } = await $clientReq.get(
-                `${endpoints[selectorType]}?page=${searchParams.page}&pageSize=${searchParams.pageSize}&name=${searchParams.keyword}`
+                `/users/get?page=${page}&pageSize=${pageSize}&name=${keyword}`
             );
 
-            setLists(prev => ({
-                ...prev,
-                [selectorType + 's']: data.list
-            }));
+            setUsers(data.list);
+            setTotal(data.total);
 
+            // 更新已选用户缓存
             const newCache = { ...selectedItemsCache };
             data.list.forEach((item: any) => {
                 if (form.getFieldValue(['config', 'approvers'])?.includes(item.id)) {
@@ -116,27 +71,27 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
                 }
             });
             setSelectedItemsCache(newCache);
-
-            setTotal(data.total);
         } catch (error) {
         } finally {
             setLoading(false);
         }
-    }, [selectorType, selectorVisible, searchParams, selectedItemsCache, form]);
-
-    // 复用处理函数
-    const handleSelect = useCallback((type: 'department' | 'role' | 'user') => {
-        setSelectorType(type);
-        setSelectorVisible(true);
-    }, []);
+    }, [page, pageSize, keyword, selectedItemsCache, form]);
 
     const handleSearch = useCallback((value: string) => {
-        setSearchParams(prev => ({
-            ...prev,
-            page: 1,
-            keyword: value
-        }));
+        setPage(1)
+        loadUsers(1, 10, value)
     }, []);
+
+    // 处理分页
+    const handlePageChange = useCallback((page: number, pageSize: number) => {
+        setPage(page)
+        loadUsers(page, pageSize, keyword)
+    }, []);
+
+    const handleApproverList = () => {
+        loadUsers(1, 10, keyword)
+        setSelectorVisible(true);
+    }
 
     const handleSelectorOk = (rows: any[]) => {
         const newCache = { ...selectedItemsCache };
@@ -156,27 +111,6 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
         setSelectorVisible(false);
     };
 
-    const handlePageChange = useCallback((page: number, pageSize: number) => {
-        setSearchParams(prev => ({
-            ...prev,
-            page,
-            pageSize
-        }));
-    }, []);
-
-    // 根据发起人类型加载对应数据
-    useEffect(() => {
-        if (selectorVisible) {
-            if (selectorType === 'department') {
-                loadData();
-            } else if (selectorType === 'role') {
-                loadData();
-            } else if (selectorType === 'user') {
-                loadData();
-            }
-        }
-    }, [selectorVisible, selectorType, searchParams]);
-
     const handleValuesChange = (changedValues: any) => {
         if (changedValues.config) {
             updateNodeData(node.id, {
@@ -193,7 +127,7 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
     // 获取选中项
     const getSelectedItems = () => {
         const approvers = form.getFieldValue(['config', 'approvers']) || [];
-        return approvers.map((id: any) => selectedItemsCache[id]).filter(Boolean);
+        return approvers.map((id: string) => selectedItemsCache[id]).filter(Boolean);
     };
 
     const handleRemoveTag = (id: string) => {
@@ -212,16 +146,6 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
         });
         handleValuesChange({ config: { approvers: newApprovers } });
     };
-
-    useEffect(() => {
-        if (selectorVisible && selectorType) {
-            const approvers = form.getFieldValue(['config', 'approvers']) || [];
-            // 如果有已选项但缓存为空，则需要加载数据
-            if (approvers.length > 0 && Object.keys(selectedItemsCache).length === 0) {
-                loadData();
-            }
-        }
-    }, [selectorVisible, selectorType]);
 
     return (
         <div className="space-y-6">
@@ -278,62 +202,45 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
                 </Form.Item>
 
                 <Form.Item
-                    label="审批人类型"
-                    name={['config', 'approverType']}
-                    rules={[{ required: true, message: '请选择审批人类型' }]}
+                    label="审批人"
+                    name={['config', 'approvers']}
+                    rules={[{ required: true, message: '请选择审批人' }]}
                 >
-                    <Radio.Group>
-                        <Space direction="vertical">
-                            <Radio value="all">所有人</Radio>
-                            <Radio value="department">指定部门</Radio>
-                            <Radio value="role">指定角色</Radio>
-                            <Radio value="user">指定用户</Radio>
-                        </Space>
-                    </Radio.Group>
-                </Form.Item>
-
-                {approverType && (
-                    <Form.Item
-                        label={`已选${approverType === 'department' ? '部门' : approverType === 'role' ? '角色' : '用户'}`}
-                        name={['config', 'approvers']}
-                        rules={[{ required: true, message: '请选择审批人' }]}
-                    >
-                        <div className="space-y-4">
-                            <div className="min-h-[32px] p-2 bg-gray-50 rounded-md border border-gray-200">
-                                {getSelectedItems().length > 0 ? (
-                                    <Space size={[0, 8]} wrap>
-                                        {getSelectedItems().map((item: any) => (
-                                            <Tag
-                                                key={item.id}
-                                                className="px-2 py-1 flex items-center gap-1"
-                                                color="blue"
-                                                closable
-                                                onClose={() => handleRemoveTag(item.id)}
-                                            >
-                                                {item.name}
-                                            </Tag>
-                                        ))}
-                                    </Space>
-                                ) : (
-                                    <div className="text-gray-400">未选择</div>
-                                )}
-                            </div>
-                            <Button
-                                type="primary"
-                                ghost
-                                className="w-full"
-                                icon={<Icon icon="mdi:plus" />}
-                                onClick={() => handleSelect(approverType)}
-                            >
-                                选择{approverType === 'department' ? '部门' : approverType === 'role' ? '角色' : '用户'}
-                            </Button>
+                    <div className="space-y-4">
+                        <div className="min-h-[32px] p-2 bg-gray-50 rounded-md border border-gray-200">
+                            {getSelectedItems().length > 0 ? (
+                                <Space size={[0, 8]} wrap>
+                                    {getSelectedItems().map((item: any) => (
+                                        <Tag
+                                            key={item.id}
+                                            className="px-2 py-1 flex items-center gap-1"
+                                            color="blue"
+                                            closable
+                                            onClose={() => handleRemoveTag(item.id)}
+                                        >
+                                            {item.name}
+                                        </Tag>
+                                    ))}
+                                </Space>
+                            ) : (
+                                <div className="text-gray-400">未选择审批人</div>
+                            )}
                         </div>
-                    </Form.Item>
-                )}
+                        <Button
+                            type="primary"
+                            ghost
+                            className="w-full"
+                            icon={<Icon icon="mdi:plus" />}
+                            onClick={handleApproverList}
+                        >
+                            选择审批人
+                        </Button>
+                    </div>
+                </Form.Item>
 
                 <TableSelector
                     visible={selectorVisible}
-                    title={`选择${selectorType === 'department' ? '部门' : selectorType === 'role' ? '角色' : '用户'}`}
+                    title="选择审批人"
                     onCancel={() => setSelectorVisible(false)}
                     onOk={handleSelectorOk}
                     onSearch={handleSearch}
@@ -341,8 +248,8 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
                     loading={loading}
                     defaultSelectedRows={getSelectedItems()}
                     pagination={{
-                        current: searchParams.page,
-                        pageSize: searchParams.pageSize,
+                        current: page,
+                        pageSize: pageSize,
                         total: total,
                         onChange: handlePageChange
                     }}
@@ -351,7 +258,7 @@ const ApprovalNodeProperties: React.FC<ApprovalNodePropertiesProps> = ({ node })
                             { title: 'ID', dataIndex: 'id' },
                             { title: '名称', dataIndex: 'name' }
                         ],
-                        dataSource: dataSource
+                        dataSource: users
                     }}
                 />
 

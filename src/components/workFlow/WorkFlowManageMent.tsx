@@ -3,6 +3,8 @@ import { Table, Button, Space, Modal, message, Tag, Tooltip } from 'antd';
 import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { $clientReq } from '@/utils/clientRequest';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
+import WorkflowPreview from './WorkflowPreview';
 
 interface FormTemplate {
     id: number;
@@ -20,6 +22,7 @@ interface FormTemplate {
 }
 
 const FormManagement: React.FC = () => {
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<FormTemplate[]>([]);
 
@@ -29,7 +32,10 @@ const FormManagement: React.FC = () => {
     const [currentCategory, setCurrentCategory] = useState<number | undefined>(undefined);
 
 
-    const fetchData =  useCallback(async (page = currentPage, size = pageSize, status = currentStatus, category = currentCategory) => {
+    const [previewVisible, setPreviewVisible] = useState(false);
+    const [previewData, setPreviewData] = useState<any>(null);
+
+    const fetchData = useCallback(async (page = currentPage, size = pageSize, status = currentStatus, category = currentCategory) => {
         try {
             setLoading(true);
             const response = await $clientReq.get(`/workflows/get?page=${page}&pageSize=${size}&status=${status}&category=${category}`);
@@ -53,19 +59,23 @@ const FormManagement: React.FC = () => {
             okText: '确定',
             onOk: async () => {
                 try {
-                    await $clientReq.delete(`/workflows/${id}`);
-                    message.success('删除成功');
-                    fetchData();
+                    const res = await $clientReq.delete(`/workflows/del?id=${id}`);
+                    if (res?.message) {
+                        message.success('删除成功');
+                    }
                 } catch (error) {
                     message.error('删除失败');
+                } finally {
+                    fetchData()
                 }
             }
         });
     };
 
     const handlePreview = (record: FormTemplate) => {
-        console.log('record:', record);
-    }
+        setPreviewData(record.config);
+        setPreviewVisible(true);
+    };
 
     const columns: any = [
         {
@@ -91,8 +101,8 @@ const FormManagement: React.FC = () => {
             width: 100,
             align: 'center',
             render: (status: number) => (
-                <Tag color={status === 1 ? 'warning' : status === 2 ? 'success' : 'danger'}>
-                    {status === 1 ? '草稿' : status === 2 ? '已发布' : '已禁用'}
+                <Tag color={status === 2 ? 'success' : 'error'}>
+                    {status === 2 ? '已发布' : '已禁用'}
                 </Tag>
             ),
         },
@@ -125,13 +135,6 @@ const FormManagement: React.FC = () => {
                             onClick={() => handlePreview(record)}
                         />
                     </Tooltip>
-                    <Tooltip title="编辑">
-                        <Button
-                            type="text"
-                            icon={<EditOutlined />}
-                            onClick={() => {/* TODO: 实现编辑功能 */ }}
-                        />
-                    </Tooltip>
                     <Tooltip title="删除">
                         <Button
                             type="text"
@@ -151,7 +154,7 @@ const FormManagement: React.FC = () => {
                 <div className="p-4 border-b border-gray-200">
                     <Space className="flex justify-between">
                         <span className="text-lg font-medium">流程管理</span>
-                        <Button type="primary" onClick={() => {/* TODO: 跳转到流程设计器 */ }}>
+                        <Button type="primary" onClick={() => { router.push('/workFlow/index') }}>
                             新建流程
                         </Button>
                     </Space>
@@ -170,6 +173,14 @@ const FormManagement: React.FC = () => {
                     />
                 </div>
             </div>
+
+            {previewData && (
+                <WorkflowPreview
+                    open={previewVisible}
+                    onClose={() => setPreviewVisible(false)}
+                    data={previewData}
+                />
+            )}
         </div>
     );
 };

@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Divider, Form, message, Modal, Space, Tooltip, Select, Input, Switch } from 'antd';
 import { WorkflowNodeType } from '../types';
+import WorkflowPreviewModal from './WorkflowPreviewModal';
 import {
     DeleteOutlined,
     SaveOutlined,
     ImportOutlined,
     ExportOutlined,
-    ClearOutlined
+    ClearOutlined,
+    EyeOutlined
 } from '@ant-design/icons';
 import { useWorkflowStore } from '../store/useWorkflowStore';
 import { Icon } from '@iconify/react';
@@ -19,6 +21,8 @@ const Toolbar: React.FC = () => {
     const [form] = Form.useForm();
     const [addLoading, setAddLoading] = useState(false);
     const [categoryOptions, setCategoryOptions] = useState<Array<{ label: string; value: string }>>([]);
+
+    const [previewVisible, setPreviewVisible] = useState(false);
     // 渲染节点按钮
     const renderNodeButton = (type: WorkflowNodeType, title: string) => {
         const config = nodeConfigs[type];
@@ -139,6 +143,7 @@ const Toolbar: React.FC = () => {
             const config = exportConfig();
             const requestData = {
                 ...values,
+                status: 2,
                 config
             };
             await $clientReq.post('/workflows/create', requestData)
@@ -197,6 +202,12 @@ const Toolbar: React.FC = () => {
             </Space>
 
             <Space>
+                <Tooltip title="预览">
+                    <Button
+                        icon={<EyeOutlined />}
+                        onClick={() => setPreviewVisible(true)}
+                    />
+                </Tooltip>
                 <Tooltip title="导入配置">
                     <Button
                         icon={<ImportOutlined />}
@@ -262,7 +273,7 @@ const Toolbar: React.FC = () => {
                     >
                         <Input disabled />
                     </Form.Item>
-                    <Form.Item
+                    {/* <Form.Item
                         name="status"
                         label="状态"
                         valuePropName="checked"
@@ -270,9 +281,15 @@ const Toolbar: React.FC = () => {
                     >
                         <Switch />
 
-                    </Form.Item>
+                    </Form.Item> */}
                 </Form>
             </Modal>
+
+            <WorkflowPreviewModal
+                open={previewVisible}
+                onClose={() => setPreviewVisible(false)}
+                config={exportConfig()}
+            />
         </div>
     );
 };

@@ -1,38 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Card, Space, Modal, Badge, Tooltip, message, Row, Col, Input, Select, DatePicker, Form, Spin, Divider, Empty } from 'antd';
-import { PlusOutlined, EyeOutlined, DeleteOutlined, UndoOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Table, Button, Card, Space, Modal, Badge, Tooltip, message, Row, Col, Input, Select, Form, Spin, Divider, Empty, Tag, Drawer, Steps, Avatar } from 'antd';
+import { PlusOutlined, EyeOutlined, DeleteOutlined, UndoOutlined, SearchOutlined, ReloadOutlined, SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, StopOutlined, TeamOutlined, IdcardOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { $clientReq } from '@/utils/clientRequest';
-import { mockData } from '@/data/mockData';
 import DynamicForm from '../form/DynamicForm';
 
-interface ApplyRecord {
-  id: string;
-  title: string;
-  processName: string;
-  status: 'draft' | 'running' | 'completed' | 'rejected';
-  currentNode: string;
-  createTime: string;
-  updateTime: string;
-  progress: number;
-  approvalRecords: {
-    node: string;
-    operator: string;
-    action: 'approve' | 'reject';
-    comment: string;
-    time: string;
-  }[];
-}
-
 const ApplyManagement: React.FC = () => {
+
+  // 查询参数-start
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ApplyRecord[]>([]);
-  const [initiateModalVisible, setInitiateModalVisible] = useState(false);
+  const [taskRecords, setTaskRecords] = useState<any[]>([]);
+  const [category, setCategory] = useState<string | null>(null);
+  const [status, setStatus] = useState<number | null>(null);
+  // 查询参数-end
 
+  const [initiateModalVisible, setInitiateModalVisible] = useState(false);
   const [workflowId, setWorkflowId] = useState<string | undefined>(undefined);
   const [workflowOptions, setWorkflowOptions] = useState<any[]>([]);
   const [form] = Form.useForm();
@@ -44,6 +30,10 @@ const ApplyManagement: React.FC = () => {
   // 当前的表单配置
   const [currentFormConfig, setCurrentFormConfig] = useState<any[]>([]);
 
+  // 详情抽屉要有
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [taskRecordList, setTaskRecordList] = useState<any[]>([]);
+
   const handleCategoryChange = (value: string) => {
     setCurrentCategory(value);
     fetchWorkFlowsList(value);
@@ -51,7 +41,6 @@ const ApplyManagement: React.FC = () => {
 
   // 处理工作流选择
   const handleWorkflowSelect = async (workflowId: string) => {
-    console.log('workflowOptions', workflowOptions);
     setFormLoading(true);
     setWorkflowId(workflowId);
     const formId = workflowOptions.find(item => item.id === workflowId)?.formId;
@@ -64,54 +53,26 @@ const ApplyManagement: React.FC = () => {
     }
   };
 
-  const [searchForm, setSearchForm] = useState({
-    keyword: '',
-    status: undefined,
-    dateRange: [],
-  });
 
-  const fetchTaskRecords = async () => {
+  const fetchTaskRecords = useCallback(async (page: number, size: number, category: string | null, status: number | null) => {
     setLoading(true);
     try {
-      const res = await $clientReq.get(`/workflows/getTaskRecords?page=${currentPage}&pageSize=${pageSize}`);
-      const records = res.data.list.map((item: any) => ({
-        id: item.id,
-        title: item.workflow.name,
-        processName: item.workflow.category,
-        status: item.status === 1 ? 'running' : 'completed', // 假设status 1为进行中
-        currentNode: item.current_node_id,
-        createTime: item.created_at,
-        updateTime: item.updated_at,
-        progress: 0, // 这里可以根据需要计算进度
-        approvalRecords: item.task_records.map((record: any) => ({
-          node: record.node_name,
-          operator: record.assignee_id,
-          action: record.action,
-          comment: record.comment,
-          time: record.created_at,
-        })),
-      }));
-      setData(records);
+      const res = await $clientReq.get(`/workflows/getInstances?page=${page}&page_size=${size}&category=${category}&status=${status}`);
+      setTaskRecords(res.data.list);
       setTotal(res.data.total);
     } catch (error) {
-      message.error('获取任务记录失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, category, status]);
 
-  // const fetchData = async () => {
-  //   setLoading(true);
-  //   try {
-  //     // 模拟API调用
-  //     await new Promise(resolve => setTimeout(resolve, 1000));
-  //     setData(mockData);
-  //   } catch (error) {
-  //     message.error('获取数据失败');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  const resetSearchForm = () => {
+    setCurrentPage(1);
+    setPageSize(10);
+    setCategory(null);
+    setStatus(null);
+    fetchTaskRecords(1, 10, null, null);
+  }
 
   // 获取流程审批的类型列表
   const fetchCategoryList = async () => {
@@ -126,7 +87,7 @@ const ApplyManagement: React.FC = () => {
   }
 
   useEffect(() => {
-    fetchTaskRecords();
+    fetchTaskRecords(currentPage, pageSize, null, null);
     fetchCategoryList();
   }, []);
 
@@ -134,65 +95,104 @@ const ApplyManagement: React.FC = () => {
     setInitiateModalVisible(true);
   };
 
-  const handleRevoke = (record: ApplyRecord) => {
+  const handleRevoke = (record: any) => {
     Modal.confirm({
       title: '确认撤回',
       content: '确定要撤回该申请吗？',
       onOk: async () => {
-        message.success('撤回成功');
-        await fetchTaskRecords();
+        const res = await $clientReq.post('/workflows/cancelApply', {
+          instance_id: record.id
+        });
+        if (res) {
+          message.success('撤回成功');
+          await fetchTaskRecords(1, 10, category, status);
+        }
       }
     });
   };
 
-  const handleDelete = (record: ApplyRecord) => {
+  const handleDetail = async (id: string) => {
+    try {
+      const res = await $clientReq.get(`/workflows/getTaskRecords?id=${id}`);
+      if (res.data) {
+        setTaskRecordList(res.data);
+        setDrawerVisible(true);
+      }
+    } catch (error) {
+    }
+  };
+
+  const handleDelete = (record: any) => {
     Modal.confirm({
       title: '确认删除',
       content: '确定要删除该申请记录吗？',
       onOk: async () => {
         message.success('删除成功');
-        await fetchTaskRecords();
+        await fetchTaskRecords(1, 10, category, status);
       }
     });
   };
 
   const statusMap = {
-    draft: { text: '草稿', status: 'default' },
-    running: { text: '进行中', status: 'processing' },
-    completed: { text: '已完成', status: 'success' },
-    rejected: { text: '已拒绝', status: 'error' }
+    1: {
+      text: '进行中',
+      color: 'processing',
+      icon: <SyncOutlined spin />,
+    },
+    2: {
+      text: '已完成',
+      color: 'success',
+      icon: <CheckCircleOutlined />,
+    },
+    3: {
+      text: '已拒绝',
+      color: 'error',
+      icon: <CloseCircleOutlined />,
+    },
+    4: {
+      text: '已撤销',
+      color: 'default',
+      icon: <StopOutlined />,
+    }
   };
 
-  const columns: ColumnsType<ApplyRecord> = [
-    {
-      title: '申请标题',
-      dataIndex: 'title',
-      key: 'title',
-      width: 200,
-    },
+  const getCategoryType = (category: string) => {
+    return categoryOptions.find(item => item.value === category)?.label;
+  }
+
+  const columns: ColumnsType<any> = [
     {
       title: '流程类型',
-      dataIndex: 'processName',
-      key: 'processName',
+      dataIndex: ['form_data', 'category'], // 使用数组形式访问嵌套属性
+      key: 'form_data.category',
       width: 150,
+      align: 'center',
+      render: (_, record) => getCategoryType(record['form_data']['category']),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 120,
-      render: (status: keyof typeof statusMap) => (
-        <Badge
-          status={statusMap[status].status as any}
-          text={statusMap[status].text}
-        />
-      ),
+      align: 'center',
+      render: (status: keyof typeof statusMap) => {
+        const statusInfo = statusMap[status];
+        return (
+          <Tag
+            icon={statusInfo.icon}
+            color={statusInfo.color}
+          >
+            {statusInfo.text}
+          </Tag>
+        );
+      },
     },
     {
       title: '当前节点',
-      dataIndex: 'currentNode',
-      key: 'currentNode',
+      dataIndex: 'current_node_id',
+      key: 'current_node_id',
       width: 150,
+      align: 'center',
     },
     {
       title: '创建时间',
@@ -200,6 +200,7 @@ const ApplyManagement: React.FC = () => {
       key: 'createTime',
       width: 180,
       render: (time) => dayjs(time).format('YYYY-MM-DD HH:mm:ss'),
+      align: 'center',
     },
     {
       title: '更新时间',
@@ -207,21 +208,23 @@ const ApplyManagement: React.FC = () => {
       key: 'updateTime',
       width: 180,
       render: (time) => dayjs(time).format('YYYY-MM-DD HH:mm:ss'),
+      align: 'center',
     },
     {
       title: '操作',
       key: 'action',
       width: 200,
+      align: 'center',
       render: (_, record) => (
         <Space>
           <Tooltip title="查看详情">
             <Button
               type="text"
               icon={<EyeOutlined />}
-              onClick={() => {/* TODO */ }}
+              onClick={() => handleDetail(record.id)}
             />
           </Tooltip>
-          {record.status === 'running' && (
+          {record.status === 1 && (
             <Tooltip title="撤回申请">
               <Button
                 type="text"
@@ -251,12 +254,11 @@ const ApplyManagement: React.FC = () => {
       workflow_id: workflowId,
       form_data: values
     }
-    console.log('params', params);
     const res = await $clientReq.post('/workflows/start', params);
-    console.log('res', res);
     message.success('提交成功');
+    setInitiateModalVisible(false);
+    await fetchTaskRecords(1, 10, category, status);
   };
-
 
   // 发起申请模态框
   const renderInitiateModal = () => (
@@ -278,7 +280,7 @@ const ApplyManagement: React.FC = () => {
         layout="vertical"
         className="space-y-4"
       >
-        <div className="p-4 border rounded-lg bg-gray-50">
+        <div className="p-4 rounded-lg">
           <Form.Item
             label="流程类型"
             name="category"
@@ -340,90 +342,160 @@ const ApplyManagement: React.FC = () => {
     </Modal>
   );
 
+  // 抽屉组件
+  const renderDetailDrawer = () => (
+    <Drawer
+      title={
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-medium">审批详情</span>
+          <Tag color="blue">共 {taskRecordList.length} 个节点</Tag>
+        </div>
+      }
+      width={680}
+      open={drawerVisible}
+      onClose={() => setDrawerVisible(false)}
+      className="custom-drawer"
+    >
+      <Steps
+        direction="vertical"
+        current={taskRecordList.length - 1}
+        className="px-4"
+      >
+        {taskRecordList.map((record) => {
+          const stepStatus = !record.action ? 'process' :
+            record.action === 'start' ? 'finish' :
+              record.action === 'approve' ? 'finish' :
+                record.action === 'reject' ? 'error' : 'wait';
+
+          return (
+            <Steps.Step
+              key={record.id}
+              status={stepStatus}
+              title={
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{record.node_name}</span>
+                    {record.action && (
+                      <Tag color={
+                        record.action === 'start' ? 'processing' :
+                          record.action === 'approve' ? 'success' :
+                            record.action === 'reject' ? 'error' : 'default'
+                      }>
+                        {record.action === 'start' ? '发起申请' :
+                          record.action === 'approve' ? '同意' :
+                            record.action === 'reject' ? '拒绝' : '已撤销'}
+                      </Tag>
+                    )}
+                  </div>
+                  <span className="text-gray-400 text-sm">
+                    {dayjs(record.approval_at || record.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                  </span>
+                </div>
+              }
+              description={
+                <div className="text-sm space-y-3 pt-2">
+                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Avatar size="small" className="bg-blue-500">
+                        {record.assignee?.name?.[0]}
+                      </Avatar>
+                      <span className="text-gray-700">{record.assignee?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <TeamOutlined />
+                      <span>{record.assignee?.department?.name}</span>
+                      <Divider type="vertical" className="bg-gray-300" />
+                      <IdcardOutlined />
+                      <span>{record.assignee?.roles?.map((role: any) => role.name).join('、')}</span>
+                    </div>
+                  </div>
+                  {record.comment && (
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="text-gray-500 mb-1">审批意见</div>
+                      <div className="text-gray-700">{record.comment}</div>
+                    </div>
+                  )}
+                </div>
+              }
+            />
+          );
+        })}
+      </Steps>
+    </Drawer>
+  );
   return (
-    <div className="p-6 space-y-6">
-      {/* 主要内容卡片 */}
+    <div className="p-4 space-y-6">
       <Card>
-        {/* 搜索区域 */}
+        {/* 搜索区域  */}
         <div className="mb-4">
-          <Row gutter={16} className="mb-4">
+          <Row gutter={18} className="mb-4">
             <Col span={6}>
-              <Input
-                placeholder="搜索申请标题"
-                prefix={<SearchOutlined />}
-                value={searchForm.keyword}
-                onChange={e => setSearchForm(prev => ({ ...prev, keyword: e.target.value }))}
+              <Select
+                placeholder="选择类型"
+                style={{ width: '100%' }}
+                value={category}
+                onChange={value => setCategory(value)}
                 allowClear
+                options={categoryOptions}
               />
             </Col>
             <Col span={6}>
               <Select
                 placeholder="选择状态"
                 style={{ width: '100%' }}
-                value={searchForm.status}
-                onChange={value => setSearchForm(prev => ({ ...prev, status: value }))}
+                value={status}
+                onChange={value => setStatus(value)}
                 allowClear
                 options={[
-                  { label: '进行中', value: 'running' },
-                  { label: '已完成', value: 'completed' },
-                  { label: '已拒绝', value: 'rejected' },
+                  { label: '进行中', value: 1 },
+                  { label: '已完成', value: 2 },
+                  { label: '已拒绝', value: 3 },
+                  { label: '已撤销', value: 4 },
                 ]}
-              />
-            </Col>
-            <Col span={8}>
-              <DatePicker.RangePicker
-                style={{ width: '100%' }}
-                onChange={(dates: any) => setSearchForm(prev => ({ ...prev, dateRange: dates }))}
               />
             </Col>
             <Col span={4}>
               <Space>
-                <Button type="primary" icon={<SearchOutlined />}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={() => fetchTaskRecords(currentPage, pageSize, category, status)}>
                   搜索
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={() => {
-                  setSearchForm({ keyword: '', status: undefined, dateRange: [] });
-                  fetchTaskRecords();
-                }}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    resetSearchForm();
+                  }}
+                >
                   重置
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleInitiate}
+                >
+                  发起申请
                 </Button>
               </Space>
             </Col>
           </Row>
         </div>
 
-        {/* 操作栏 */}
-        <div className="flex justify-between mb-4">
-          <span className="text-lg font-medium">我的申请</span>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleInitiate}
-            className="hover:scale-105 transition-transform"
-          >
-            发起申请
-          </Button>
-        </div>
-
-        {/* 表格 */}
+        {/* 表格部分保持不变 */}
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={taskRecords}
           rowKey="id"
           loading={loading}
-          pagination={{
-            showQuickJumper: true,
-            showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
-          }}
-          className="border border-gray-200 rounded-lg"
+          pagination={false}
+          className="rounded-lg"
           rowClassName="hover:bg-gray-50"
         />
       </Card>
 
       {/* 发起申请模态框 */}
-      {/* 选中的category后，再去选择工作流，然后需要工作流中的start节点的表单填写即可发起审批 */}
       {renderInitiateModal()}
+
+      {/* 详情抽屉 */}
+      {renderDetailDrawer()}
     </div>
   );
 };

@@ -71,7 +71,7 @@ const getDefaultNodeConfig = (type: WorkflowNodeType) => {
         case 'approval':
             return {
                 approvalMode: 'OR',
-                approverType: 'specific',
+                approvers: [],
                 timeLimit: 24,
                 autoPass: false,
                 isDefault: false
@@ -153,32 +153,32 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             edges: state.edges.filter(edge => edge.id !== edgeId)
         }));
     },
-    
+
     validateConnection: (connection: Connection) => {
         const { source, target } = connection;
         const sourceNode = get().nodes.find(node => node.id === source);
         const targetNode = get().nodes.find(node => node.id === target);
-    
+
         if (!sourceNode || !targetNode) return false;
-    
+
         // 开始节点只能作为源节点
         if (targetNode.data.type === 'start') return false;
-    
+
         // 结束节点只能作为目标节点
         if (sourceNode.data.type === 'end') return false;
-    
+
         // 允许以下节点类型有多个入口连接：
         // 1. parallel节点（并行节点）
         // 2. end节点（结束节点）
         // 3. approval节点（审批节点）且配置为默认审批节点
         const targetIncomingEdges = get().edges.filter(edge => edge.target === target);
-        if (targetIncomingEdges.length >= 1 && 
+        if (targetIncomingEdges.length >= 1 &&
             targetNode.data.type !== 'parallel' &&
             targetNode.data.type !== 'end' &&
             !(targetNode.data.type === 'approval' && targetNode.data.config?.isDefault)) {
             return false;
         }
-    
+
         return true;
     },
 
