@@ -2,7 +2,6 @@
 
 import { notFound } from 'next/navigation';
 import { useMenuData } from '@/hooks/useMenuData';
-import { Spin } from 'antd';
 
 const DynamicPageContent = ({ params }: { params: { slug: string, subSlug: string } }) => {
   const { slug, subSlug } = params;

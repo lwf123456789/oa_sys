@@ -33,6 +33,7 @@
     "react-hook-form": "^7.53.1",
     "reactflow": "^11.11.4",
     "styled-components": "^6.1.13",
+    "swr": "^2.2.5",
     "zustand": "^5.0.1"
   },
   "devDependencies": {

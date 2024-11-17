@@ -10,7 +10,6 @@ import logoIcon from '@/public/icons/logo.png'
 import Notification from '@/components/Notification';
 import { useLayout } from "@/contexts/layoutContext";
 import { signIn } from 'next-auth/react'
-import { withoutAuth } from '@/components/withoutAuth'
 
 const SignIn: React.FC = () => {
     const { setUseDefaultLayout } = useLayout();
@@ -43,7 +42,8 @@ const SignIn: React.FC = () => {
                     message: '登录成功!',
                     placement: 'top'
                 })
-                router.replace('/system/user')
+                await new Promise(resolve => setTimeout(resolve, 100));
+                router.replace('/system/user');
             }
         } catch (error) {
         } finally {

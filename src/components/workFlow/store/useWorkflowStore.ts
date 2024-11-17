@@ -42,7 +42,8 @@ const initialNodes: Node<WorkflowNodeData>[] = [
             description: '流程开始节点',
             config: {
                 initiatorType: 'all',
-                processTitle: '${userName}的审批申请'
+                formId: ''
+                // processTitle: '${userName}的审批申请'
             }
         }
     }

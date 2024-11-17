@@ -9,6 +9,7 @@ import { ConfigProvider } from 'antd';
 import 'dayjs/locale/zh-cn';
 import Metadata from "@/components/Metadata";
 import { ReactFlowProvider } from 'reactflow';
+import { AuthRoute } from "@/components/AuthRoute";
 
 export default function RootLayout({
   children,
@@ -25,13 +26,15 @@ export default function RootLayout({
           <SessionProvider refetchInterval={10 * 60}>
             <ReactFlowProvider>
               <MenuProvider>
-                <BreadcrumbProvider>
-                  <LayoutProvider>
-                  <div>
-                    {children}
-                  </div>
-                </LayoutProvider>
-                </BreadcrumbProvider>
+                <AuthRoute>
+                  <BreadcrumbProvider>
+                    <LayoutProvider>
+                      <div>
+                        {children}
+                      </div>
+                    </LayoutProvider>
+                  </BreadcrumbProvider>
+                </AuthRoute>
               </MenuProvider>
             </ReactFlowProvider>
           </SessionProvider>

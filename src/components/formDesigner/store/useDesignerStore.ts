@@ -11,6 +11,7 @@ interface DesignerStore {
   removeComponent: (id: string) => void;
   setSelectedId: (id: string | null) => void;
   updateComponentProps: (id: string, props: Partial<Record<string, any>>) => void;
+  reorderComponents: (oldIndex: number, newIndex: number) => void;
   clearCanvas: () => void;
   importConfig: (config: Record<string, any>) => void;
   exportConfig: () => Record<string, any>;
@@ -124,6 +125,11 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
     })
   ),
 
+  reorderComponents: (oldIndex: number, newIndex: number) =>
+    set(produce((state) => {
+      const [movedItem] = state.components.splice(oldIndex, 1);
+      state.components.splice(newIndex, 0, movedItem);
+    })),
   // 清除画布
   clearCanvas: () => set({ components: [], selectedId: null }),
   importConfig: (config) => {
@@ -181,7 +187,7 @@ export const useDesignerStore = create<DesignerStore>((set, get) => ({
       });
 
       set({
-        components: Array.isArray(data.config) 
+        components: Array.isArray(data.config)
           ? data.config.map(processComponent)
           : [],
         selectedId: null

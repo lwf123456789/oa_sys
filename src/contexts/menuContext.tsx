@@ -1,47 +1,42 @@
 'use client';
 
-import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useContext } from 'react';
+import { useSession } from 'next-auth/react';
+import { $clientReq } from '@/utils/clientRequest';
 import { MenuItem } from '@/types/menu';
-import { useMenuDataFetch } from '@/hooks/useMenuDataFetch';
+import useSWR from 'swr';
 
 interface MenuContextType {
   menuData: MenuItem[];
-  permissionsMap: Map<string, string[]>;
+  isLoading: boolean;
+  error: any;
 }
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
 
-export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { menuData } = useMenuDataFetch();
+const fetchMenuData = async () => {
+  const response = await $clientReq.get('/menus/getMenusByUser');
+  return response.data;
+};
 
-  // 使用 useCallback 优化 processMenuItem 函数
-  const processMenuItem = useCallback((item: MenuItem, map: Map<string, string[]>) => {
-    if (item?.permission_items) {
-      const permissionCodes = item.permission_items.map((p: any) => p.code);
-      map.set(item.path, permissionCodes);
+export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
+  const { data: session } = useSession();
+
+  const { data: menuData, error, isLoading } = useSWR(
+    session ? 'menuData' : null,
+    fetchMenuData,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false
     }
-    if (item.children) {
-      item.children.forEach(child => processMenuItem(child, map));
-    }
-  }, []);
-
-  // 优化 permissionsMap 的计算
-  const permissionsMap = useMemo(() => {
-    if (!menuData.length) return new Map<string, string[]>();
-    
-    const map = new Map<string, string[]>();
-    menuData.forEach(item => processMenuItem(item, map));
-    return map;
-  }, [menuData, processMenuItem]);
-
-  // 优化 context value 的创建
-  const value = useMemo(() => ({
-    menuData,
-    permissionsMap
-  }), [menuData, permissionsMap]);
+  );
 
   return (
-    <MenuContext.Provider value={value}>
+    <MenuContext.Provider value={{
+      menuData: menuData || [],
+      isLoading,
+      error
+    }}>
       {children}
     </MenuContext.Provider>
   );
@@ -49,7 +44,7 @@ export const MenuProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useMenuContext = () => {
   const context = useContext(MenuContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useMenuContext must be used within a MenuProvider');
   }
   return context;

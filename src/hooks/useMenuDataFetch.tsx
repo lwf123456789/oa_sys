@@ -3,19 +3,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { $clientReq } from '@/utils/clientRequest';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export const useMenuDataFetch = () => {
   const [menuData, setMenuData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false); // 初始状态设为 false
   const pathname = usePathname();
-  const fetchingRef = useRef(false);
+  const { data: session } = useSession();
   const mountedRef = useRef(true);
 
   useEffect(() => {
     const fetchMenuData = async () => {
-      if (pathname === '/' || fetchingRef.current || !mountedRef.current) return;
-      
-      fetchingRef.current = true;
+      // 只在已登录且非登录页面时获取菜单数据
+      if (pathname === '/' || !session) return;
+
       try {
+        setIsLoading(true);
         const data = await $clientReq.get('/menus/getMenusByUser');
         if (mountedRef.current) {
           setMenuData(prev => {
@@ -29,7 +32,7 @@ export const useMenuDataFetch = () => {
         console.error('获取菜单数据失败:', error);
       } finally {
         if (mountedRef.current) {
-          fetchingRef.current = false;
+          setIsLoading(false);
         }
       }
     };
@@ -39,7 +42,7 @@ export const useMenuDataFetch = () => {
     return () => {
       mountedRef.current = false;
     };
-  }, [pathname]);
+  }, [pathname, session]); // 添加 session 作为依赖
 
-  return { menuData };
+  return { menuData, isLoading };
 };

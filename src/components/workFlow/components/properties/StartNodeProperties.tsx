@@ -309,7 +309,7 @@ const StartNodeProperties: React.FC<StartNodePropertiesProps> = ({ node }) => {
                     <FormSelect placeholder="请选择表单" />
                 </Form.Item>
 
-                <Form.Item
+                {/* <Form.Item
                     label="流程标题"
                     name="processTitle"
                     tooltip="支持使用${表单字段}作为变量"
@@ -329,19 +329,6 @@ const StartNodeProperties: React.FC<StartNodePropertiesProps> = ({ node }) => {
                             />
                         </Tooltip>
                     </Input.Group>
-                </Form.Item>
-
-                {/* <Form.Item
-                    label="流程分类"
-                    name="category"
-                    rules={[{ required: true, message: '请选择流程分类' }]}
-                >
-                    <Select>
-                        <Select.Option value="leave">请假流程</Select.Option>
-                        <Select.Option value="expense">报销流程</Select.Option>
-                        <Select.Option value="purchase">采购流程</Select.Option>
-                        <Select.Option value="business-trip">出差流程</Select.Option>
-                    </Select>
                 </Form.Item> */}
 
                 <Form.Item

@@ -25,69 +25,72 @@ const FormDesigner: React.FC<FormDesignerProps> = ({
     onSave,
     onCancel
 }) => {
-    const { addComponent, addComponentToGrid, initializeWithData, clearCanvas } = useDesignerStore();
+    const { addComponent, addComponentToGrid, initializeWithData, clearCanvas, components, reorderComponents } = useDesignerStore();
 
-    // 初始化数据
     useEffect(() => {
         if (mode === 'edit' && initialData) {
             initializeWithData(initialData);
         } else {
-            clearCanvas(); // 新建模式时清空画布
+            clearCanvas();
         }
     }, [mode, initialData]);
 
-    const mouseSensor = useSensor(MouseSensor, {
-        activationConstraint: { distance: 10 },
-    });
-
-    const touchSensor = useSensor(TouchSensor, {
-        activationConstraint: { delay: 300, tolerance: 5 },
-    });
-
-    const sensors = useSensors(mouseSensor, touchSensor);
+    const sensors = useSensors(
+        useSensor(MouseSensor, {
+            activationConstraint: { distance: 5 },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: { delay: 100, tolerance: 5 },
+        })
+    );
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
 
-        if (!over || !active.data.current?.isNew) return;
+        if (!over) return;
 
-        const newComponent = {
-            id: `${active.data.current.type}-${Date.now()}`,
-            type: active.data.current.type,
-            label: active.data.current.label || active.data.current.type,
-            props: active.data.current.defaultProps || {}
-        };
+        // 处理新组件的拖入
+        if (active.data.current?.isNew) {
+            const newComponent = {
+                id: `${active.data.current.type}-${Date.now()}`,
+                type: active.data.current.type,
+                label: active.data.current.label || active.data.current.type,
+                props: active.data.current.defaultProps || {}
+            };
 
-        if (typeof over.id === 'string' && over.id.includes('-cell-')) {
-            const parts = over.id.split('-');
-            const gridId = `${parts[0]}-${parts[1]}`;
-            const cellIndex = parseInt(parts[3]);
-            addComponentToGrid(gridId, cellIndex, newComponent);
-        } else if (over.id === 'canvas') {
-            addComponent(newComponent);
+            if (over.id === 'canvas') {
+                addComponent(newComponent);
+            } else if (typeof over.id === 'string' && over.id.includes('-cell-')) {
+                const [gridId, , , cellIndex] = over.id.split('-');
+                addComponentToGrid(`${gridId}`, parseInt(cellIndex), newComponent);
+            }
+            return;
+        }
+
+        // 处理组件排序
+        if (active.data.current?.isExisting && over.id !== 'canvas') {
+            const oldIndex = components.findIndex(item => item.id === active.id);
+            const newIndex = components.findIndex(item => item.id === over.id);
+            if (oldIndex !== -1 && newIndex !== -1) {
+                reorderComponents(oldIndex, newIndex);
+            }
         }
     };
 
     return (
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <DndContext
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+        >
             <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
-                <Toolbar 
-                    mode={mode}
-                    onSave={onSave}
-                    initialData={initialData}
-                />
-
+                <Toolbar mode={mode} onSave={onSave} initialData={initialData} />
                 <div className="flex flex-1 overflow-hidden">
-                    <div className="w-64 bg-white border-r border-gray-200 overflow-hidden">
+                    <div className="w-64 bg-white border-r border-gray-200">
                         <ComponentList />
                     </div>
-
                     <div className="flex-1 overflow-y-auto p-6">
-                        <div className="min-h-full">
-                            <DesignCanvas />
-                        </div>
+                        <DesignCanvas />
                     </div>
-
                     <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto">
                         <PropertyPanel />
                     </div>

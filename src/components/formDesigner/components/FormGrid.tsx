@@ -41,7 +41,12 @@ interface DroppableCellProps {
 }
 
 const DroppableCell: React.FC<DroppableCellProps> = ({ id, children }) => {
-  const { setNodeRef } = useDroppable({ id });
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: {
+      type: 'grid-cell'
+    }
+  });
 
   return (
     <div
@@ -49,7 +54,8 @@ const DroppableCell: React.FC<DroppableCellProps> = ({ id, children }) => {
       className={`
         min-h-[100px] p-2 rounded
         ${!children ? 'border-2 border-dashed border-gray-200' : ''}
-      `}
+        ${isOver ? 'border-blue-400 bg-blue-50/30' : ''}
+    `}
     >
       {children || <div className="h-full flex items-center justify-center text-gray-400">拖拽组件到这里</div>}
     </div>

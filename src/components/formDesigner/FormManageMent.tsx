@@ -32,6 +32,8 @@ const FormManagement: React.FC = () => {
 
     // 处理保存逻辑
     const handleSave = async (formData: any) => {
+        console.log('formData:', formData);
+        
         try {
             if (designerMode === 'edit' && editingTemplate) {
                 const res = await $clientReq.put(`/form-templates/update?id=${editingTemplate.id}`, formData);
@@ -237,8 +239,6 @@ const FormManagement: React.FC = () => {
                     overflow: 'auto'
                 }}
                 bodyStyle={{
-                    minHeight: '50vh',
-                    maxHeight: 'calc(100vh - 110px)', // 减去头部和底部的高度
                     overflow: 'auto'
                 }}
                 footer={null}

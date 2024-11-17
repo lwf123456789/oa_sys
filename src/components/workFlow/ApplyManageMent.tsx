@@ -116,6 +116,7 @@ const ApplyManagement: React.FC = () => {
       const res = await $clientReq.get(`/workflows/getTaskRecords?id=${id}`);
       if (res.data) {
         setTaskRecordList(res.data);
+
         setDrawerVisible(true);
       }
     } catch (error) {
@@ -249,15 +250,24 @@ const ApplyManagement: React.FC = () => {
   ];
 
   // 提交申请
-  const handleSubmit = async (values: any) => {
-    const params = {
-      workflow_id: workflowId,
-      form_data: values
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      const params = {
+        workflow_id: workflowId,
+        form_data: {
+          ...values,
+          category: currentCategory || '',
+        }
+      };
+      const res = await $clientReq.post('/workflows/start', params);
+      message.success('提交成功');
+      setInitiateModalVisible(false);
+      form.resetFields(); // 重置表单
+      await fetchTaskRecords(1, 10, category, status);
+    } catch (error) {
+      console.error('表单验证失败:', error);
     }
-    const res = await $clientReq.post('/workflows/start', params);
-    message.success('提交成功');
-    setInitiateModalVisible(false);
-    await fetchTaskRecords(1, 10, category, status);
   };
 
   // 发起申请模态框
@@ -274,12 +284,7 @@ const ApplyManagement: React.FC = () => {
       footer={null}
       width={800}
     >
-      <Form
-        form={form}
-        onFinish={handleSubmit}
-        layout="vertical"
-        className="space-y-4"
-      >
+      <div className="space-y-4">
         <div className="p-4 rounded-lg">
           <Form.Item
             label="流程类型"
@@ -317,7 +322,10 @@ const ApplyManagement: React.FC = () => {
             <Spin spinning={formLoading} tip="加载中...">
               <div className="p-4 border rounded-lg">
                 {currentFormConfig.length > 0 ? (
-                  <DynamicForm config={currentFormConfig} />
+                  <DynamicForm
+                    config={currentFormConfig}
+                    form={form}
+                  />
                 ) : (
                   <Empty description="暂无表单配置" />
                 )}
@@ -327,18 +335,18 @@ const ApplyManagement: React.FC = () => {
         )}
 
         {currentFormConfig.length > 0 && (
-          <Form.Item className="text-right mt-4">
+          <div className="text-right mt-4">
             <Space>
               <Button onClick={() => setInitiateModalVisible(false)}>
                 取消
               </Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" onClick={handleSubmit}>
                 提交申请
               </Button>
             </Space>
-          </Form.Item>
+          </div>
         )}
-      </Form>
+      </div>
     </Modal>
   );
 
@@ -361,7 +369,7 @@ const ApplyManagement: React.FC = () => {
         current={taskRecordList.length - 1}
         className="px-4"
       >
-        {taskRecordList.map((record) => {
+        {taskRecordList.map((record: any) => {
           const stepStatus = !record.action ? 'process' :
             record.action === 'start' ? 'finish' :
               record.action === 'approve' ? 'finish' :
@@ -383,7 +391,9 @@ const ApplyManagement: React.FC = () => {
                       }>
                         {record.action === 'start' ? '发起申请' :
                           record.action === 'approve' ? '同意' :
-                            record.action === 'reject' ? '拒绝' : '已撤销'}
+                            record.action === 'reject' ? '拒绝' :
+                              record.action === 'end' ? '流程结束' : '已撤销'
+                        }
                       </Tag>
                     )}
                   </div>
@@ -394,21 +404,26 @@ const ApplyManagement: React.FC = () => {
               }
               description={
                 <div className="text-sm space-y-3 pt-2">
-                  <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Avatar size="small" className="bg-blue-500">
-                        {record.assignee?.name?.[0]}
-                      </Avatar>
-                      <span className="text-gray-700">{record.assignee?.name}</span>
+                  {/* 非结束节点显示审批人信息 */}
+                  {record.action !== 'end' && (
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Avatar size="small" className="bg-blue-500">
+                          {record.assignee?.name?.[0]}
+                        </Avatar>
+                        <span className="text-gray-700">{record.assignee?.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <TeamOutlined />
+                        <span>{record.assignee?.department?.name}</span>
+                        <Divider type="vertical" className="bg-gray-300" />
+                        <IdcardOutlined />
+                        <span>{record.assignee?.roles?.map((role: any) => role.name).join('、')}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <TeamOutlined />
-                      <span>{record.assignee?.department?.name}</span>
-                      <Divider type="vertical" className="bg-gray-300" />
-                      <IdcardOutlined />
-                      <span>{record.assignee?.roles?.map((role: any) => role.name).join('、')}</span>
-                    </div>
-                  </div>
+                  )}
+
+                  {/* 所有节点都显示审批意见（如果有） */}
                   {record.comment && (
                     <div className="bg-gray-50 p-3 rounded-lg">
                       <div className="text-gray-500 mb-1">审批意见</div>
