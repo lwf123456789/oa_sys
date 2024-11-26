@@ -58,9 +58,7 @@ export interface WorkflowNodeData {
             action?: 'pass' | 'reject' | 'notify';
         };
         /** 并行节点配置 */
-        strategy?: 'ALL' | 'ANY' | 'VOTE';
-        /** 投票通过数量（仅在VOTE策略时有效） */
-        votePass?: number;
+        strategy?: 'ALL' | 'ANY';
         /** 分支配置 */
         branches?: Array<{
             id: string;
@@ -90,10 +88,8 @@ export interface WorkflowTemplate {
 
 // 并行节点配置
 export interface ParallelNodeConfig {
-    /** 并行策略：ALL(所有分支都通过)、ANY(任一分支通过)、VOTE(投票机制) */
-    strategy: 'ALL' | 'ANY' | 'VOTE';
-    /** 投票通过数量（仅在VOTE策略时有效） */
-    votePass?: number;
+    /** 并行策略：ALL(所有分支都通过)、ANY(任一分支通过) */
+    strategy: 'ALL' | 'ANY';
     /** 分支配置 */
     branches: {
         id: string;

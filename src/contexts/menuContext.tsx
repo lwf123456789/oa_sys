@@ -27,7 +27,8 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     fetchMenuData,
     {
       revalidateOnFocus: false,
-      shouldRetryOnError: false
+      shouldRetryOnError: false,
+      refreshInterval: 1000 * 60 * 5
     }
   );
 
